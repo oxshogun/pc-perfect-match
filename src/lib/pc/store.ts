@@ -8,7 +8,21 @@ const ACTIVE_KEY = "riglab.activeBuild.v1";
 
 type Listener = () => void;
 const listeners = new Set<Listener>();
-const emit = () => listeners.forEach((l) => l());
+
+// Cached snapshots — required for useSyncExternalStore stability.
+let partsCache: Part[] | null = null;
+let buildsCache: Build[] | null = null;
+let activeIdCache: string | null = null;
+
+function invalidate() {
+  partsCache = null;
+  buildsCache = null;
+  activeIdCache = null;
+}
+const emit = () => {
+  invalidate();
+  listeners.forEach((l) => l());
+};
 
 function isBrowser() {
   return typeof window !== "undefined";

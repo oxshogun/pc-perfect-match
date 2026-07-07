@@ -5,6 +5,8 @@ import { SEED_PARTS } from "./seed";
 const PARTS_KEY = "riglab.parts.v1";
 const BUILDS_KEY = "riglab.builds.v1";
 const ACTIVE_KEY = "riglab.activeBuild.v1";
+const CATALOG_VERSION_KEY = "riglab.catalogVersion";
+const CATALOG_VERSION = 2;
 
 type Listener = () => void;
 const listeners = new Set<Listener>();

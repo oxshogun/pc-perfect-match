@@ -5,6 +5,8 @@ import { SEED_PARTS } from "./seed";
 const PARTS_KEY = "riglab.parts.v1";
 const BUILDS_KEY = "riglab.builds.v1";
 const ACTIVE_KEY = "riglab.activeBuild.v1";
+const CATALOG_VERSION_KEY = "riglab.catalogVersion";
+const CATALOG_VERSION = 2;
 
 type Listener = () => void;
 const listeners = new Set<Listener>();
@@ -69,6 +71,16 @@ function ensureInit() {
     const b = emptyBuild("My rig");
     writeJSON(BUILDS_KEY, [b]);
     writeJSON(ACTIVE_KEY, b.id);
+  }
+  // Merge in newly-shipped seed parts on catalog version bump, without
+  // touching user-added or user-edited parts.
+  const storedVersion = Number(window.localStorage.getItem(CATALOG_VERSION_KEY) ?? "1");
+  if (storedVersion < CATALOG_VERSION) {
+    const existing = readJSON<Part[]>(PARTS_KEY, []);
+    const ids = new Set(existing.map((p) => p.id));
+    const additions = SEED_PARTS.filter((p) => !ids.has(p.id));
+    if (additions.length) writeJSON(PARTS_KEY, [...existing, ...additions]);
+    window.localStorage.setItem(CATALOG_VERSION_KEY, String(CATALOG_VERSION));
   }
 }
 

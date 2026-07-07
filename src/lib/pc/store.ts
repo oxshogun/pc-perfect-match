@@ -72,6 +72,16 @@ function ensureInit() {
     writeJSON(BUILDS_KEY, [b]);
     writeJSON(ACTIVE_KEY, b.id);
   }
+  // Merge in newly-shipped seed parts on catalog version bump, without
+  // touching user-added or user-edited parts.
+  const storedVersion = Number(window.localStorage.getItem(CATALOG_VERSION_KEY) ?? "1");
+  if (storedVersion < CATALOG_VERSION) {
+    const existing = readJSON<Part[]>(PARTS_KEY, []);
+    const ids = new Set(existing.map((p) => p.id));
+    const additions = SEED_PARTS.filter((p) => !ids.has(p.id));
+    if (additions.length) writeJSON(PARTS_KEY, [...existing, ...additions]);
+    window.localStorage.setItem(CATALOG_VERSION_KEY, String(CATALOG_VERSION));
+  }
 }
 
 /* ---------- Parts ---------- */

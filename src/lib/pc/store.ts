@@ -8,7 +8,21 @@ const ACTIVE_KEY = "riglab.activeBuild.v1";
 
 type Listener = () => void;
 const listeners = new Set<Listener>();
-const emit = () => listeners.forEach((l) => l());
+
+// Cached snapshots — required for useSyncExternalStore stability.
+let partsCache: Part[] | null = null;
+let buildsCache: Build[] | null = null;
+let activeIdCache: string | null = null;
+
+function invalidate() {
+  partsCache = null;
+  buildsCache = null;
+  activeIdCache = null;
+}
+const emit = () => {
+  invalidate();
+  listeners.forEach((l) => l());
+};
 
 function isBrowser() {
   return typeof window !== "undefined";
@@ -62,11 +76,12 @@ function ensureInit() {
 
 export function getParts(): Part[] {
   ensureInit();
-  return readJSON<Part[]>(PARTS_KEY, []);
+  if (partsCache === null) partsCache = readJSON<Part[]>(PARTS_KEY, []);
+  return partsCache;
 }
 
 export function upsertPart(part: Part) {
-  const parts = getParts();
+  const parts = [...getParts()];
   const idx = parts.findIndex((p) => p.id === part.id);
   if (idx >= 0) parts[idx] = part;
   else parts.push({ ...part, id: part.id || uid("part") });
@@ -77,7 +92,6 @@ export function upsertPart(part: Part) {
 export function deletePart(id: string) {
   const parts = getParts().filter((p) => p.id !== id);
   writeJSON(PARTS_KEY, parts);
-  // scrub deleted part from all builds
   const builds = getBuilds().map((b) => scrubPartFromBuild(b, id));
   writeJSON(BUILDS_KEY, builds);
   emit();
@@ -97,12 +111,14 @@ function scrubPartFromBuild(b: Build, id: string): Build {
 
 export function getBuilds(): Build[] {
   ensureInit();
-  return readJSON<Build[]>(BUILDS_KEY, []);
+  if (buildsCache === null) buildsCache = readJSON<Build[]>(BUILDS_KEY, []);
+  return buildsCache;
 }
 
 export function getActiveBuildId(): string {
   ensureInit();
-  return readJSON<string>(ACTIVE_KEY, "");
+  if (activeIdCache === null) activeIdCache = readJSON<string>(ACTIVE_KEY, "");
+  return activeIdCache;
 }
 
 export function setActiveBuildId(id: string) {
@@ -117,11 +133,13 @@ export function getActiveBuild(): Build {
   if (found) return found;
   if (builds[0]) {
     writeJSON(ACTIVE_KEY, builds[0].id);
+    invalidate();
     return builds[0];
   }
   const b = emptyBuild();
   writeJSON(BUILDS_KEY, [b]);
   writeJSON(ACTIVE_KEY, b.id);
+  invalidate();
   return b;
 }
 
@@ -161,7 +179,10 @@ export function updateActiveBuild(mutator: (b: Build) => Build) {
 
 function subscribe(cb: Listener) {
   listeners.add(cb);
-  const onStorage = () => cb();
+  const onStorage = () => {
+    invalidate();
+    cb();
+  };
   if (isBrowser()) window.addEventListener("storage", onStorage);
   return () => {
     listeners.delete(cb);
@@ -169,35 +190,30 @@ function subscribe(cb: Listener) {
   };
 }
 
+// Stable server-snapshot singletons — must be reference-equal across calls.
+const SERVER_PARTS: Part[] = [];
+const SERVER_BUILDS: Build[] = [];
+const SERVER_BUILD: Build = {
+  id: "ssr",
+  name: "",
+  createdAt: 0,
+  updatedAt: 0,
+  parts: { ram: [], storage: [] },
+};
+
 export function useParts(): Part[] {
-  return useSyncExternalStore(
-    subscribe,
-    () => getParts(),
-    () => [] as Part[],
-  );
+  return useSyncExternalStore(subscribe, getParts, () => SERVER_PARTS);
 }
 
 export function useBuilds(): Build[] {
-  return useSyncExternalStore(
-    subscribe,
-    () => getBuilds(),
-    () => [] as Build[],
-  );
+  return useSyncExternalStore(subscribe, getBuilds, () => SERVER_BUILDS);
 }
 
 export function useActiveBuild(): Build {
-  const emptyServer = emptyBuild();
-  return useSyncExternalStore(
-    subscribe,
-    () => getActiveBuild(),
-    () => emptyServer,
-  );
+  return useSyncExternalStore(subscribe, getActiveBuild, () => SERVER_BUILD);
 }
 
 export function useActiveBuildId(): string {
-  return useSyncExternalStore(
-    subscribe,
-    () => getActiveBuildId(),
-    () => "",
-  );
+  return useSyncExternalStore(subscribe, getActiveBuildId, () => "");
 }
+

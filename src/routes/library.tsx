@@ -1,0 +1,213 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { CATEGORY_LABEL, CATEGORY_ORDER, type Part, type PartCategory } from "@/lib/pc/types";
+import { deletePart, useParts } from "@/lib/pc/store";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { PartForm } from "@/components/pc/PartForm";
+import { partSummary } from "@/components/pc/partSummary";
+import { Search, Plus, Pencil, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+
+export const Route = createFileRoute("/library")({
+  head: () => ({
+    meta: [
+      { title: "Parts library — RIG.LAB" },
+      { name: "description", content: "Manage your custom PC parts library." },
+    ],
+  }),
+  component: LibraryPage,
+});
+
+function LibraryPage() {
+  const parts = useParts();
+  const [filter, setFilter] = useState<PartCategory | "all">("all");
+  const [q, setQ] = useState("");
+  const [editing, setEditing] = useState<Part | null>(null);
+  const [creating, setCreating] = useState<PartCategory | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Part | null>(null);
+
+  const filtered = useMemo(() => {
+    return parts.filter((p) => {
+      if (filter !== "all" && p.category !== filter) return false;
+      if (!q.trim()) return true;
+      const needle = q.toLowerCase();
+      return p.name.toLowerCase().includes(needle) || (p.brand ?? "").toLowerCase().includes(needle);
+    });
+  }, [parts, filter, q]);
+
+  return (
+    <div className="mx-auto max-w-7xl px-4 py-8">
+      <div className="mb-6">
+        <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-primary">Inventory</p>
+        <h1 className="text-3xl font-bold tracking-tight">Parts library</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          {parts.length} parts stored locally. Edit specs to keep compatibility checks accurate.
+        </p>
+      </div>
+
+      <div className="flex flex-wrap gap-2 mb-4">
+        <button
+          onClick={() => setFilter("all")}
+          className={`px-3 py-1 rounded-md text-xs font-mono uppercase tracking-widest border transition ${
+            filter === "all"
+              ? "bg-primary/15 border-primary/50 text-primary"
+              : "border-border text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          All · {parts.length}
+        </button>
+        {CATEGORY_ORDER.map((c) => {
+          const count = parts.filter((p) => p.category === c).length;
+          return (
+            <button
+              key={c}
+              onClick={() => setFilter(c)}
+              className={`px-3 py-1 rounded-md text-xs font-mono uppercase tracking-widest border transition ${
+                filter === c
+                  ? "bg-primary/15 border-primary/50 text-primary"
+                  : "border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {CATEGORY_LABEL[c]} · {count}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex gap-2 mb-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search"
+            className="pl-8"
+          />
+        </div>
+        {filter !== "all" && (
+          <Button onClick={() => setCreating(filter)}>
+            <Plus className="h-4 w-4 mr-1" /> Add {CATEGORY_LABEL[filter]}
+          </Button>
+        )}
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border py-16 text-center">
+          <p className="text-muted-foreground">Nothing here yet.</p>
+          {filter !== "all" && (
+            <Button className="mt-3" onClick={() => setCreating(filter)}>
+              <Plus className="h-4 w-4 mr-1" /> Add first {CATEGORY_LABEL[filter].toLowerCase()}
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="grid gap-2">
+          {filtered.map((p) => (
+            <div
+              key={p.id}
+              className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 hover:border-primary/40 transition"
+            >
+              <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-widest">
+                {CATEGORY_LABEL[p.category]}
+              </Badge>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  {p.brand && (
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                      {p.brand}
+                    </span>
+                  )}
+                  <span className="font-medium truncate">{p.name}</span>
+                </div>
+                <p className="text-xs text-muted-foreground font-mono truncate">{partSummary(p)}</p>
+              </div>
+              {p.price != null && (
+                <span className="font-mono text-sm text-primary shrink-0">${p.price}</span>
+              )}
+              <Button variant="ghost" size="icon" onClick={() => setEditing(p)}>
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setConfirmDelete(p)}
+                className="text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {(editing || creating) && (
+        <Dialog open onOpenChange={(v) => !v && (setEditing(null), setCreating(null))}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="font-mono uppercase tracking-widest text-sm">
+                {editing ? "Edit" : "Add"} · {CATEGORY_LABEL[(editing?.category ?? creating)!]}
+              </DialogTitle>
+            </DialogHeader>
+            <PartForm
+              category={(editing?.category ?? creating)!}
+              initial={editing ?? undefined}
+              onCancel={() => {
+                setEditing(null);
+                setCreating(null);
+              }}
+              onSaved={() => {
+                toast.success(editing ? "Part updated" : "Part added");
+                setEditing(null);
+                setCreating(null);
+              }}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
+
+      <AlertDialog open={!!confirmDelete} onOpenChange={(v) => !v && setConfirmDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete part?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes “{confirmDelete?.name}” from the library and any builds using it.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (confirmDelete) {
+                  deletePart(confirmDelete.id);
+                  toast.success("Part deleted");
+                }
+                setConfirmDelete(null);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}

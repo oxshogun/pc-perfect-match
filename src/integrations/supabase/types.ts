@@ -14,7 +14,107 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      builds: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          owner_id: string
+          parts: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          owner_id: string
+          parts?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          owner_id?: string
+          parts?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      parts: {
+        Row: {
+          asin: string | null
+          category: string
+          created_at: string
+          data: Json
+          id: string
+          owner_id: string
+          price_updated_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          asin?: string | null
+          category: string
+          created_at?: string
+          data: Json
+          id?: string
+          owner_id: string
+          price_updated_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          asin?: string | null
+          category?: string
+          created_at?: string
+          data?: Json
+          id?: string
+          owner_id?: string
+          price_updated_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      price_history: {
+        Row: {
+          checked_at: string
+          currency: string
+          id: string
+          owner_id: string
+          part_id: string
+          price: number | null
+          source: string
+        }
+        Insert: {
+          checked_at?: string
+          currency?: string
+          id?: string
+          owner_id: string
+          part_id: string
+          price?: number | null
+          source?: string
+        }
+        Update: {
+          checked_at?: string
+          currency?: string
+          id?: string
+          owner_id?: string
+          part_id?: string
+          price?: number | null
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_history_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "parts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

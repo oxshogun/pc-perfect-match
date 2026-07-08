@@ -178,7 +178,7 @@
 @utility scanline {
   position: relative;
 }
-@utility scanline::after {
+.scanline::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -191,3 +191,4 @@
   );
   pointer-events: none;
 }
+

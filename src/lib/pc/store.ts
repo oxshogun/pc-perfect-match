@@ -7,6 +7,9 @@ const BUILDS_KEY = "riglab.builds.v1";
 const ACTIVE_KEY = "riglab.activeBuild.v1";
 const CATALOG_VERSION_KEY = "riglab.catalogVersion";
 const CATALOG_VERSION = 2;
+const LAST_REFRESH_KEY = "riglab.prices.lastRefresh";
+const REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24h
+
 
 type Listener = () => void;
 const listeners = new Set<Listener>();
@@ -101,7 +104,39 @@ export function upsertPart(part: Part) {
   emit();
 }
 
+/**
+ * Merge freshly-fetched Amazon prices into the local parts library.
+ * Called after `fetchAmazonPrices` server function returns.
+ */
+export function applyPriceUpdates(
+  updates: { id: string; price?: number; error?: string }[],
+) {
+  const parts = getParts();
+  const now = Date.now();
+  const byId = new Map(updates.map((u) => [u.id, u]));
+  let changed = false;
+  const next = parts.map((p) => {
+    const u = byId.get(p.id);
+    if (!u || u.error || u.price == null) return p;
+    changed = true;
+    return { ...p, price: u.price, priceUpdatedAt: now };
+  });
+  if (changed) writeJSON(PARTS_KEY, next);
+  if (isBrowser()) window.localStorage.setItem(LAST_REFRESH_KEY, String(now));
+  emit();
+}
+
+export function getLastPriceRefresh(): number {
+  if (!isBrowser()) return 0;
+  return Number(window.localStorage.getItem(LAST_REFRESH_KEY) ?? "0");
+}
+
+export function isPriceRefreshDue(): boolean {
+  return Date.now() - getLastPriceRefresh() > REFRESH_INTERVAL_MS;
+}
+
 export function deletePart(id: string) {
+
   const parts = getParts().filter((p) => p.id !== id);
   writeJSON(PARTS_KEY, parts);
   const builds = getBuilds().map((b) => scrubPartFromBuild(b, id));

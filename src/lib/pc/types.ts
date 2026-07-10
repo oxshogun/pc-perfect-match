@@ -41,7 +41,10 @@ export interface BasePart {
   price?: number;
   category: PartCategory;
   notes?: string;
+  asin?: string;
+  priceUpdatedAt?: number;
 }
+
 
 export interface CpuPart extends BasePart {
   category: "cpu";

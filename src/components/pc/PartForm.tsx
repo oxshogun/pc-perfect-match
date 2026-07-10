@@ -156,7 +156,16 @@ export function PartForm({ category, initial, onSaved, onCancel }: Props) {
             onChange={(e) => update("price", e.target.value === "" ? undefined : Number(e.target.value))}
           />
         </Field>
+        <Field label="Amazon ASIN">
+          <Input
+            value={draft.asin ?? ""}
+            onChange={(e) => update("asin", e.target.value.trim() || undefined)}
+            placeholder="B0XXXXXXXX"
+            maxLength={10}
+          />
+        </Field>
       </Row>
+
 
       {draft.category === "cpu" && <CpuFields d={draft} u={update} />}
       {draft.category === "motherboard" && <MoboFields d={draft} u={update} />}

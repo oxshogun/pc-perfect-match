@@ -1,7 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { CATEGORY_LABEL, CATEGORY_ORDER, type Part, type PartCategory } from "@/lib/pc/types";
-import { deletePart, useParts } from "@/lib/pc/store";
+import {
+  applyPriceUpdates,
+  deletePart,
+  getLastPriceRefresh,
+  isPriceRefreshDue,
+  useParts,
+} from "@/lib/pc/store";
+import { fetchAmazonPrices } from "@/lib/prices.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { PartForm } from "@/components/pc/PartForm";
 import { partSummary } from "@/components/pc/partSummary";
-import { Search, Plus, Pencil, Trash2 } from "lucide-react";
+import { Search, Plus, Pencil, Trash2, RefreshCw } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,6 +44,17 @@ export const Route = createFileRoute("/library")({
   component: LibraryPage,
 });
 
+function timeAgo(ts?: number) {
+  if (!ts) return null;
+  const diff = Date.now() - ts;
+  const h = Math.floor(diff / 3_600_000);
+  if (h < 1) return "just now";
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return `${d}d ago`;
+}
+
+
 function LibraryPage() {
   const parts = useParts();
   const [filter, setFilter] = useState<PartCategory | "all">("all");
@@ -43,6 +62,54 @@ function LibraryPage() {
   const [editing, setEditing] = useState<Part | null>(null);
   const [creating, setCreating] = useState<PartCategory | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Part | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<number>(0);
+  const refresh = useServerFn(fetchAmazonPrices);
+  const autoRan = useRef(false);
+
+  const partsWithAsin = useMemo(
+    () => parts.filter((p) => p.asin && /^[A-Z0-9]{10}$/i.test(p.asin)),
+    [parts],
+  );
+
+  async function runRefresh(silent = false) {
+    if (refreshing) return;
+    if (partsWithAsin.length === 0) {
+      if (!silent) toast.info("Add an Amazon ASIN to a part first");
+      return;
+    }
+    setRefreshing(true);
+    try {
+      const { results } = await refresh({
+        data: { items: partsWithAsin.map((p) => ({ id: p.id, asin: p.asin! })) },
+      });
+      applyPriceUpdates(results);
+      setLastRefresh(getLastPriceRefresh());
+      const ok = results.filter((r) => r.price != null).length;
+      const failed = results.length - ok;
+      if (!silent || ok > 0) {
+        toast.success(
+          `Updated ${ok} price${ok === 1 ? "" : "s"}${failed ? ` · ${failed} failed` : ""}`,
+        );
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Refresh failed");
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  // Auto-refresh once per 24h when the library is opened.
+  useEffect(() => {
+    setLastRefresh(getLastPriceRefresh());
+    if (autoRan.current) return;
+    autoRan.current = true;
+    if (isPriceRefreshDue() && parts.some((p) => p.asin)) {
+      void runRefresh(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
 
   const filtered = useMemo(() => {
     return parts.filter((p) => {
@@ -55,13 +122,30 @@ function LibraryPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
-      <div className="mb-6">
-        <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-primary">Inventory</p>
-        <h1 className="text-3xl font-bold tracking-tight">Parts library</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {parts.length} parts stored locally. Edit specs to keep compatibility checks accurate.
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-primary">Inventory</p>
+          <h1 className="text-3xl font-bold tracking-tight">Parts library</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {parts.length} parts stored locally · {partsWithAsin.length} linked to Amazon
+            {lastRefresh ? ` · prices ${timeAgo(lastRefresh)}` : ""}
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => runRefresh(false)}
+          disabled={refreshing || partsWithAsin.length === 0}
+          title={
+            partsWithAsin.length === 0
+              ? "Add an Amazon ASIN to a part to enable price updates"
+              : "Fetch latest Amazon prices"
+          }
+        >
+          <RefreshCw className={`h-4 w-4 mr-1 ${refreshing ? "animate-spin" : ""}`} />
+          {refreshing ? "Refreshing…" : "Refresh prices"}
+        </Button>
       </div>
+
 
       <div className="flex flex-wrap gap-2 mb-4">
         <button
@@ -140,8 +224,16 @@ function LibraryPage() {
                 <p className="text-xs text-muted-foreground font-mono truncate">{partSummary(p)}</p>
               </div>
               {p.price != null && (
-                <span className="font-mono text-sm text-primary shrink-0">${p.price}</span>
+                <div className="flex flex-col items-end shrink-0">
+                  <span className="font-mono text-sm text-primary">${p.price}</span>
+                  {p.priceUpdatedAt && (
+                    <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+                      {timeAgo(p.priceUpdatedAt)}
+                    </span>
+                  )}
+                </div>
               )}
+
               <Button variant="ghost" size="icon" onClick={() => setEditing(p)}>
                 <Pencil className="h-4 w-4" />
               </Button>

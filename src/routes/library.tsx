@@ -62,6 +62,54 @@ function LibraryPage() {
   const [editing, setEditing] = useState<Part | null>(null);
   const [creating, setCreating] = useState<PartCategory | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Part | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<number>(0);
+  const refresh = useServerFn(fetchAmazonPrices);
+  const autoRan = useRef(false);
+
+  const partsWithAsin = useMemo(
+    () => parts.filter((p) => p.asin && /^[A-Z0-9]{10}$/i.test(p.asin)),
+    [parts],
+  );
+
+  async function runRefresh(silent = false) {
+    if (refreshing) return;
+    if (partsWithAsin.length === 0) {
+      if (!silent) toast.info("Add an Amazon ASIN to a part first");
+      return;
+    }
+    setRefreshing(true);
+    try {
+      const { results } = await refresh({
+        data: { items: partsWithAsin.map((p) => ({ id: p.id, asin: p.asin! })) },
+      });
+      applyPriceUpdates(results);
+      setLastRefresh(getLastPriceRefresh());
+      const ok = results.filter((r) => r.price != null).length;
+      const failed = results.length - ok;
+      if (!silent || ok > 0) {
+        toast.success(
+          `Updated ${ok} price${ok === 1 ? "" : "s"}${failed ? ` · ${failed} failed` : ""}`,
+        );
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Refresh failed");
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  // Auto-refresh once per 24h when the library is opened.
+  useEffect(() => {
+    setLastRefresh(getLastPriceRefresh());
+    if (autoRan.current) return;
+    autoRan.current = true;
+    if (isPriceRefreshDue() && parts.some((p) => p.asin)) {
+      void runRefresh(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
 
   const filtered = useMemo(() => {
     return parts.filter((p) => {

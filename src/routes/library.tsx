@@ -122,13 +122,30 @@ function LibraryPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
-      <div className="mb-6">
-        <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-primary">Inventory</p>
-        <h1 className="text-3xl font-bold tracking-tight">Parts library</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {parts.length} parts stored locally. Edit specs to keep compatibility checks accurate.
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-primary">Inventory</p>
+          <h1 className="text-3xl font-bold tracking-tight">Parts library</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {parts.length} parts stored locally · {partsWithAsin.length} linked to Amazon
+            {lastRefresh ? ` · prices ${timeAgo(lastRefresh)}` : ""}
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => runRefresh(false)}
+          disabled={refreshing || partsWithAsin.length === 0}
+          title={
+            partsWithAsin.length === 0
+              ? "Add an Amazon ASIN to a part to enable price updates"
+              : "Fetch latest Amazon prices"
+          }
+        >
+          <RefreshCw className={`h-4 w-4 mr-1 ${refreshing ? "animate-spin" : ""}`} />
+          {refreshing ? "Refreshing…" : "Refresh prices"}
+        </Button>
       </div>
+
 
       <div className="flex flex-wrap gap-2 mb-4">
         <button

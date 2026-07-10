@@ -224,8 +224,16 @@ function LibraryPage() {
                 <p className="text-xs text-muted-foreground font-mono truncate">{partSummary(p)}</p>
               </div>
               {p.price != null && (
-                <span className="font-mono text-sm text-primary shrink-0">${p.price}</span>
+                <div className="flex flex-col items-end shrink-0">
+                  <span className="font-mono text-sm text-primary">${p.price}</span>
+                  {p.priceUpdatedAt && (
+                    <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+                      {timeAgo(p.priceUpdatedAt)}
+                    </span>
+                  )}
+                </div>
               )}
+
               <Button variant="ghost" size="icon" onClick={() => setEditing(p)}>
                 <Pencil className="h-4 w-4" />
               </Button>

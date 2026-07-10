@@ -133,9 +133,10 @@ export function getLastPriceRefresh(): number {
 
 export function isPriceRefreshDue(): boolean {
   return Date.now() - getLastPriceRefresh() > REFRESH_INTERVAL_MS;
-
+}
 
 export function deletePart(id: string) {
+
   const parts = getParts().filter((p) => p.id !== id);
   writeJSON(PARTS_KEY, parts);
   const builds = getBuilds().map((b) => scrubPartFromBuild(b, id));

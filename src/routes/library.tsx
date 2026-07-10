@@ -1,7 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { CATEGORY_LABEL, CATEGORY_ORDER, type Part, type PartCategory } from "@/lib/pc/types";
-import { deletePart, useParts } from "@/lib/pc/store";
+import {
+  applyPriceUpdates,
+  deletePart,
+  getLastPriceRefresh,
+  isPriceRefreshDue,
+  useParts,
+} from "@/lib/pc/store";
+import { fetchAmazonPrices } from "@/lib/prices.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { PartForm } from "@/components/pc/PartForm";
 import { partSummary } from "@/components/pc/partSummary";
-import { Search, Plus, Pencil, Trash2 } from "lucide-react";
+import { Search, Plus, Pencil, Trash2, RefreshCw } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,6 +43,17 @@ export const Route = createFileRoute("/library")({
   }),
   component: LibraryPage,
 });
+
+function timeAgo(ts?: number) {
+  if (!ts) return null;
+  const diff = Date.now() - ts;
+  const h = Math.floor(diff / 3_600_000);
+  if (h < 1) return "just now";
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return `${d}d ago`;
+}
+
 
 function LibraryPage() {
   const parts = useParts();

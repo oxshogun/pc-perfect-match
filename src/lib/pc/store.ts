@@ -7,6 +7,9 @@ const BUILDS_KEY = "riglab.builds.v1";
 const ACTIVE_KEY = "riglab.activeBuild.v1";
 const CATALOG_VERSION_KEY = "riglab.catalogVersion";
 const CATALOG_VERSION = 2;
+const LAST_REFRESH_KEY = "riglab.prices.lastRefresh";
+const REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24h
+
 
 type Listener = () => void;
 const listeners = new Set<Listener>();

@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { PartForm } from "@/components/pc/PartForm";
 import { partSummary } from "@/components/pc/partSummary";
+import { PartThumb } from "@/components/pc/PartThumb";
 import { Search, Plus, Pencil, Trash2, RefreshCw } from "lucide-react";
 import {
   AlertDialog,

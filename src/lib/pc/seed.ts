@@ -234,6 +234,60 @@ const COOLERS: Part[] = [
   { id: "cool-deepcool-ls720", category: "cooler", name: "LS720", brand: "Deepcool", price: 129, supportedSockets: ["AM4", "AM5", "LGA1700", "LGA1851", "LGA1200"], heightMm: 0, tdpRating: 300, type: "AIO", radiatorMm: 360 },
 ];
 
+// ============================== EXTRA PARTS (v3) ==============================
+const EXTRAS: Part[] = [
+  // Budget / previous-gen CPUs
+  { id: "cpu-amd-5500", category: "cpu", name: "Ryzen 5 5500", brand: "AMD", price: 89, socket: "AM4", tdp: 65, ramType: "DDR4", maxRamSpeed: 3200, memoryChannels: 2, integratedGraphics: false, cores: 6, boostClock: 4.2 },
+  { id: "cpu-amd-5600g", category: "cpu", name: "Ryzen 5 5600G", brand: "AMD", price: 129, socket: "AM4", tdp: 65, ramType: "DDR4", maxRamSpeed: 3200, memoryChannels: 2, integratedGraphics: true, cores: 6, boostClock: 4.4 },
+  { id: "cpu-intel-13400f", category: "cpu", name: "Core i5-13400F", brand: "Intel", price: 179, socket: "LGA1700", tdp: 65, ramType: "DDR5", maxRamSpeed: 4800, memoryChannels: 2, integratedGraphics: false, cores: 10, boostClock: 4.6 },
+  { id: "cpu-intel-12100f", category: "cpu", name: "Core i3-12100F", brand: "Intel", price: 89, socket: "LGA1700", tdp: 58, ramType: "DDR4", maxRamSpeed: 3200, memoryChannels: 2, integratedGraphics: false, cores: 4, boostClock: 4.3 },
+
+  // Budget motherboards
+  { id: "mb-msi-b550m-pro", category: "motherboard", name: "B550M Pro-VDH WiFi", brand: "MSI", price: 109, socket: "AM4", chipset: "B550", formFactor: "Micro-ATX", ramType: "DDR4", ramSlots: 4, maxRamSpeed: 4400, memoryChannels: 2, m2Slots: 1, sataPorts: 4, pcieX16Slots: 1, eps8Pin: 1 },
+  { id: "mb-asus-a620m", category: "motherboard", name: "PRIME A620M-A", brand: "ASUS", price: 109, socket: "AM5", chipset: "A620", formFactor: "Micro-ATX", ramType: "DDR5", ramSlots: 4, maxRamSpeed: 6400, memoryChannels: 2, m2Slots: 2, sataPorts: 4, pcieX16Slots: 1, eps8Pin: 1 },
+  { id: "mb-gb-b760m-ds3h", category: "motherboard", name: "B760M DS3H DDR4", brand: "Gigabyte", price: 99, socket: "LGA1700", chipset: "B760", formFactor: "Micro-ATX", ramType: "DDR4", ramSlots: 4, maxRamSpeed: 3200, memoryChannels: 2, m2Slots: 2, sataPorts: 4, pcieX16Slots: 1, eps8Pin: 1 },
+  { id: "mb-asrock-b650e-pg-itx", category: "motherboard", name: "B650E PG-ITX WiFi", brand: "ASRock", price: 279, socket: "AM5", chipset: "B650E", formFactor: "Mini-ITX", ramType: "DDR5", ramSlots: 2, maxRamSpeed: 6400, memoryChannels: 2, m2Slots: 3, sataPorts: 4, pcieX16Slots: 1, eps8Pin: 1 },
+
+  // More RAM options
+  { id: "ram-corsair-ven-64-6000", category: "ram", name: "Vengeance 64GB (2x32) DDR5-6000 CL30", brand: "Corsair", price: 209, ramType: "DDR5", speed: 6000, sizeGb: 32, sticks: 2 },
+  { id: "ram-gskill-tz-96-6400", category: "ram", name: "Trident Z5 Neo 96GB (2x48) DDR5-6400", brand: "G.Skill", price: 369, ramType: "DDR5", speed: 6400, sizeGb: 48, sticks: 2 },
+  { id: "ram-corsair-ven-16-3200", category: "ram", name: "Vengeance LPX 16GB (2x8) DDR4-3200", brand: "Corsair", price: 39, ramType: "DDR4", speed: 3200, sizeGb: 8, sticks: 2 },
+  { id: "ram-gskill-tz-64-3600", category: "ram", name: "Trident Z Neo 64GB (2x32) DDR4-3600", brand: "G.Skill", price: 139, ramType: "DDR4", speed: 3600, sizeGb: 32, sticks: 2 },
+
+  // More GPUs
+  { id: "gpu-nv-5070", category: "gpu", name: "GeForce RTX 5070", brand: "NVIDIA", price: 549, lengthMm: 250, tdp: 250, pcieConnectors: { pin8: 0, pin6: 0, pin12vhpwr: 1 } },
+  { id: "gpu-nv-5060", category: "gpu", name: "GeForce RTX 5060", brand: "NVIDIA", price: 299, lengthMm: 244, tdp: 145, pcieConnectors: { pin8: 1, pin6: 0, pin12vhpwr: 0 } },
+  { id: "gpu-asus-4060-dual", category: "gpu", name: "Dual RTX 4060 OC", brand: "ASUS", price: 289, lengthMm: 227, tdp: 115, pcieConnectors: { pin8: 1, pin6: 0, pin12vhpwr: 0 } },
+  { id: "gpu-sapphire-7600xt-pulse", category: "gpu", name: "RX 7600 XT Pulse", brand: "Sapphire", price: 329, lengthMm: 240, tdp: 190, pcieConnectors: { pin8: 2, pin6: 0, pin12vhpwr: 0 } },
+  { id: "gpu-intel-b570", category: "gpu", name: "Arc B570 Limited Edition", brand: "Intel", price: 219, lengthMm: 272, tdp: 150, pcieConnectors: { pin8: 1, pin6: 0, pin12vhpwr: 0 } },
+
+  // More storage
+  { id: "sto-samsung-990pro-1tb", category: "storage", name: "990 Pro 1TB", brand: "Samsung", price: 99, interface: "M.2 NVMe", sizeGb: 1000 },
+  { id: "sto-wd-sn770-1tb", category: "storage", name: "WD Black SN770 1TB", brand: "WD", price: 69, interface: "M.2 NVMe", sizeGb: 1000 },
+  { id: "sto-crucial-p5-plus-1tb", category: "storage", name: "P5 Plus 1TB", brand: "Crucial", price: 79, interface: "M.2 NVMe", sizeGb: 1000 },
+  { id: "sto-seagate-firecuda-540-2tb", category: "storage", name: "FireCuda 540 2TB", brand: "Seagate", price: 239, interface: "M.2 NVMe", sizeGb: 2000 },
+  { id: "sto-wd-red-8tb", category: "storage", name: "Red Plus 8TB NAS HDD", brand: "WD", price: 179, interface: "SATA", sizeGb: 8000 },
+  { id: "sto-seagate-ironwolf-8tb", category: "storage", name: "IronWolf 8TB NAS HDD", brand: "Seagate", price: 189, interface: "SATA", sizeGb: 8000 },
+
+  // More PSUs (budget / high-end)
+  { id: "psu-corsair-rm650x", category: "psu", name: "RM650x 2024", brand: "Corsair", price: 109, wattage: 650, formFactor: "ATX", efficiency: "80+ Gold", pcie8Pin: 2, eps8Pin: 2, pcie12vhpwr: 1, modular: "Full" },
+  { id: "psu-corsair-hx1500i", category: "psu", name: "HX1500i", brand: "Corsair", price: 429, wattage: 1500, formFactor: "ATX", efficiency: "80+ Platinum", pcie8Pin: 8, eps8Pin: 2, pcie12vhpwr: 2, modular: "Full" },
+  { id: "psu-seasonic-focus-750", category: "psu", name: "Focus GX-750", brand: "Seasonic", price: 119, wattage: 750, formFactor: "ATX", efficiency: "80+ Gold", pcie8Pin: 4, eps8Pin: 2, pcie12vhpwr: 0, modular: "Full" },
+  { id: "psu-bequiet-pure-750", category: "psu", name: "Pure Power 12 M 750W", brand: "be quiet!", price: 129, wattage: 750, formFactor: "ATX", efficiency: "80+ Gold", pcie8Pin: 4, eps8Pin: 2, pcie12vhpwr: 1, modular: "Full" },
+
+  // More cases
+  { id: "case-fractal-pop-air", category: "case", name: "Pop Air", brand: "Fractal Design", price: 79, supportedFormFactors: ["ATX", "Micro-ATX", "Mini-ITX"], maxGpuLengthMm: 405, maxCoolerHeightMm: 170, psuFormFactors: ["ATX"], radiatorSupport: "360mm front" },
+  { id: "case-lian-o11-mini", category: "case", name: "O11 Dynamic Mini", brand: "Lian Li", price: 129, supportedFormFactors: ["ATX", "Micro-ATX", "Mini-ITX"], maxGpuLengthMm: 395, maxCoolerHeightMm: 170, psuFormFactors: ["ATX", "SFX", "SFX-L"], radiatorSupport: "280mm side/top" },
+  { id: "case-nzxt-h5-flow", category: "case", name: "H5 Flow (2024)", brand: "NZXT", price: 99, supportedFormFactors: ["ATX", "Micro-ATX", "Mini-ITX"], maxGpuLengthMm: 365, maxCoolerHeightMm: 165, psuFormFactors: ["ATX"], radiatorSupport: "280mm front, 360mm bottom" },
+  { id: "case-fractal-terra", category: "case", name: "Terra", brand: "Fractal Design", price: 179, supportedFormFactors: ["Mini-ITX"], maxGpuLengthMm: 322, maxCoolerHeightMm: 77, psuFormFactors: ["SFX", "SFX-L"], radiatorSupport: "None" },
+
+  // More coolers
+  { id: "cool-noctua-nh-u12s", category: "cooler", name: "NH-U12S redux", brand: "Noctua", price: 59, supportedSockets: ["AM4", "AM5", "LGA1700", "LGA1851", "LGA1200"], heightMm: 158, tdpRating: 180, type: "Air" },
+  { id: "cool-thermalright-aa120", category: "cooler", name: "Assassin X 120 R SE", brand: "Thermalright", price: 25, supportedSockets: ["AM4", "AM5", "LGA1700", "LGA1851", "LGA1200"], heightMm: 155, tdpRating: 180, type: "Air" },
+  { id: "cool-arctic-lf3-240", category: "cooler", name: "Liquid Freezer III 240", brand: "Arctic", price: 79, supportedSockets: ["AM4", "AM5", "LGA1700", "LGA1851", "LGA1200"], heightMm: 0, tdpRating: 280, type: "AIO", radiatorMm: 240 },
+  { id: "cool-corsair-h170i-elite", category: "cooler", name: "iCUE H170i Elite LCD XT", brand: "Corsair", price: 329, supportedSockets: ["AM4", "AM5", "LGA1700", "LGA1851"], heightMm: 0, tdpRating: 400, type: "AIO", radiatorMm: 420 },
+];
+
 export const SEED_PARTS: Part[] = [
   ...CPUS,
   ...MOBOS,
@@ -243,4 +297,6 @@ export const SEED_PARTS: Part[] = [
   ...PSUS,
   ...CASES,
   ...COOLERS,
+  ...EXTRAS,
 ];
+

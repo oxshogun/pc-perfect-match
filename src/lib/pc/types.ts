@@ -43,6 +43,7 @@ export interface BasePart {
   notes?: string;
   asin?: string;
   priceUpdatedAt?: number;
+  imageUrl?: string;
 }
 
 

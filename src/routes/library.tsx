@@ -210,6 +210,7 @@ function LibraryPage() {
               key={p.id}
               className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 hover:border-primary/40 transition"
             >
+              <PartThumb category={p.category} src={p.imageUrl} alt={p.name} size="md" />
               <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-widest">
                 {CATEGORY_LABEL[p.category]}
               </Badge>

@@ -123,6 +123,7 @@ export function PartPickerDialog({ open, onOpenChange, category, onPick, multipl
                           ${p.price}
                         </span>
                       )}
+                      </div>
                     </div>
                   </button>
                 ))

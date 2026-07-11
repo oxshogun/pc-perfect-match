@@ -6,7 +6,7 @@ const PARTS_KEY = "riglab.parts.v1";
 const BUILDS_KEY = "riglab.builds.v1";
 const ACTIVE_KEY = "riglab.activeBuild.v1";
 const CATALOG_VERSION_KEY = "riglab.catalogVersion";
-const CATALOG_VERSION = 2;
+const CATALOG_VERSION = 3;
 const LAST_REFRESH_KEY = "riglab.prices.lastRefresh";
 const REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24h
 
@@ -109,7 +109,7 @@ export function upsertPart(part: Part) {
  * Called after `fetchAmazonPrices` server function returns.
  */
 export function applyPriceUpdates(
-  updates: { id: string; price?: number; error?: string }[],
+  updates: { id: string; price?: number; image?: string; error?: string }[],
 ) {
   const parts = getParts();
   const now = Date.now();
@@ -117,9 +117,16 @@ export function applyPriceUpdates(
   let changed = false;
   const next = parts.map((p) => {
     const u = byId.get(p.id);
-    if (!u || u.error || u.price == null) return p;
+    if (!u) return p;
+    const patch: Partial<Part> = {};
+    if (!u.error && u.price != null) {
+      patch.price = u.price;
+      patch.priceUpdatedAt = now;
+    }
+    if (u.image && u.image !== p.imageUrl) patch.imageUrl = u.image;
+    if (Object.keys(patch).length === 0) return p;
     changed = true;
-    return { ...p, price: u.price, priceUpdatedAt: now };
+    return { ...p, ...patch } as Part;
   });
   if (changed) writeJSON(PARTS_KEY, next);
   if (isBrowser()) window.localStorage.setItem(LAST_REFRESH_KEY, String(now));

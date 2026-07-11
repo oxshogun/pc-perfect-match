@@ -2,6 +2,7 @@ import { CATEGORY_LABEL, type Part, type PartCategory } from "@/lib/pc/types";
 import { Button } from "@/components/ui/button";
 import { Cpu, HardDrive, MemoryStick, Power, Box, Fan, MonitorPlay, Wrench, Plus, X } from "lucide-react";
 import { partSummary } from "./partSummary";
+import { PartThumb } from "./PartThumb";
 import type { LucideIcon } from "lucide-react";
 
 const ICONS: Record<PartCategory, LucideIcon> = {
@@ -58,6 +59,7 @@ export function PartSlot({ category, parts, onAdd, onRemove, multiple }: Props) 
         <ul className="divide-y divide-border">
           {parts.map((p) => (
             <li key={p.id} className="flex items-start gap-3 px-4 py-3">
+              <PartThumb category={p.category} src={p.imageUrl} alt={p.name} size="md" />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   {p.brand && (

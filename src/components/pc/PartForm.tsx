@@ -164,7 +164,25 @@ export function PartForm({ category, initial, onSaved, onCancel }: Props) {
             maxLength={10}
           />
         </Field>
+        <Field label="Image URL">
+          <Input
+            value={draft.imageUrl ?? ""}
+            onChange={(e) => update("imageUrl", e.target.value.trim() || undefined)}
+            placeholder="https://…"
+          />
+        </Field>
       </Row>
+
+      {draft.imageUrl && (
+        <div className="flex items-center gap-3">
+          <img
+            src={draft.imageUrl}
+            alt=""
+            className="h-16 w-16 rounded-md border border-border bg-white object-contain"
+          />
+          <span className="text-xs text-muted-foreground font-mono">Preview</span>
+        </div>
+      )}
 
 
       {draft.category === "cpu" && <CpuFields d={draft} u={update} />}

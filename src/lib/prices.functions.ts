@@ -18,6 +18,7 @@ export type PriceResult = {
   asin: string;
   price?: number;
   currency?: string;
+  image?: string;
   error?: string;
 };
 
@@ -39,8 +40,12 @@ async function fetchOne(asin: string, apiKey: string): Promise<Omit<PriceResult,
       json?.product?.price?.value ??
       buybox?.rrp?.value;
     const currency = buybox?.price?.currency ?? json?.product?.price?.currency ?? "USD";
-    if (typeof price !== "number") return { asin, error: "No price found" };
-    return { asin, price, currency };
+    const image =
+      json?.product?.main_image?.link ??
+      json?.product?.images?.[0]?.link ??
+      undefined;
+    if (typeof price !== "number") return { asin, error: "No price found", image };
+    return { asin, price, currency, image };
   } catch (e) {
     return { asin, error: e instanceof Error ? e.message : "Fetch failed" };
   }

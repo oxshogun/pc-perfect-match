@@ -47,10 +47,12 @@ export const listParts = createServerFn({ method: "GET" })
       .order("category")
       .order("created_at", { ascending: true });
     if (error) throw new Error(error.message);
-    return (data as PartRow[]).map(rowToPart);
+    return (data as unknown as PartRow[]).map(rowToPart);
   });
 
 /* ---------------- Upsert ---------------- */
+
+
 
 const upsertInput = z.object({
   part: z.record(z.string(), z.unknown()),
@@ -78,7 +80,7 @@ export const upsertPart = createServerFn({ method: "POST" })
       // Update: preserve visibility & owner (RLS enforces)
       const { data: row, error } = await context.supabase
         .from("parts")
-        .update({ ...rowFields })
+        .update({ ...rowFields } as any)
         .eq("id", part.id)
         .select("id, owner_id, category, asin, visibility, price_updated_at, data")
         .single();
@@ -86,11 +88,12 @@ export const upsertPart = createServerFn({ method: "POST" })
       return rowToPart(row as PartRow);
     }
 
-    const insertRow: Record<string, unknown> = {
+
+    const insertRow = {
       ...rowFields,
       visibility,
       owner_id: visibility === "catalog" ? null : context.userId,
-    };
+    } as any;
     const { data: row, error } = await context.supabase
       .from("parts")
       .insert(insertRow)
@@ -98,6 +101,7 @@ export const upsertPart = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
     return rowToPart(row as PartRow);
+
   });
 
 /* ---------------- Delete ---------------- */

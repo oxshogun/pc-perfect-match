@@ -84,7 +84,7 @@ export const saveBuild = createServerFn({ method: "POST" })
     if (data.id) {
       const { data: row, error } = await context.supabase
         .from("builds")
-        .update({ name: data.name, parts: data.parts })
+        .update({ name: data.name, parts: data.parts as any })
         .eq("id", data.id)
         .select("id, name, parts, is_active, created_at, updated_at")
         .single();
@@ -93,12 +93,13 @@ export const saveBuild = createServerFn({ method: "POST" })
     }
     const { data: row, error } = await context.supabase
       .from("builds")
-      .insert({ owner_id: context.userId, name: data.name, parts: data.parts, is_active: false })
+      .insert({ owner_id: context.userId, name: data.name, parts: data.parts as any, is_active: false })
       .select("id, name, parts, is_active, created_at, updated_at")
       .single();
     if (error) throw new Error(error.message);
     return rowToBuild(row as BuildRow);
   });
+
 
 export const deleteBuild = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

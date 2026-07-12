@@ -77,12 +77,13 @@ export const fetchAmazonPrices = createServerFn({ method: "POST" })
           .eq("id", item.id)
           .maybeSingle();
         const currentData = (row?.data as Record<string, unknown>) ?? {};
-        const nextData = { ...currentData, price: r.price };
+        const nextData: Record<string, unknown> = { ...currentData, price: r.price };
         if (r.image) nextData.imageUrl = r.image;
         await context.supabase
           .from("parts")
-          .update({ data: nextData, price_updated_at: new Date().toISOString() })
+          .update({ data: nextData as any, price_updated_at: new Date().toISOString() })
           .eq("id", item.id);
+
 
         await context.supabase.from("price_history").insert({
           part_id: item.id,

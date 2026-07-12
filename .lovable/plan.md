@@ -1,43 +1,54 @@
+# Locked catalog + private user parts
 
-# Auto-updating Amazon prices with Rainforest API
+## What visitors will see
 
-This is a substantial change because the app currently stores everything in browser localStorage. Doing it right in phases:
+- Landing page + share links stay public.
+- To use the workbench, library, or builds they sign in (Google or email/password).
+- The parts library shows two sections:
+  - **Catalog** — the parts you (admin) curate. Everyone can see them and use them in builds, but only you can add/edit/delete/refresh prices.
+  - **My parts** — a visitor's own additions. Private to them; they can freely add/edit/delete.
+- Builds are private to each user and follow them across devices.
 
-## Phase 1 — Backend foundation
+## Admin
 
-1. **Enable Lovable Cloud** (Supabase under the hood).
-2. **Auth**: email/password + Google sign-in. No user profile table needed — just `auth.users`.
-3. **Schema** (new migration with GRANTs + RLS):
-   - `parts` — same shape as current `Part` type, plus `owner_id`, `asin` (text, nullable), `price_updated_at`.
-   - `builds` — id, owner_id, name, parts (jsonb), timestamps.
-   - `price_history` — part_id, price, currency, checked_at (for graphs later).
-   - RLS: owner reads/writes own rows. Service role for the cron job.
-4. **One-time migration UX**: on first login, if the browser has `riglab.parts.v1` in localStorage, offer to import them into the user's cloud library.
+You're identified by the email **landonjamesmckale@gmail.com**. Sign in with Google (or email/password) using that address and the admin controls (add part, edit, delete, refresh prices) appear. Every other signed-in user sees the catalog as read-only.
 
-## Phase 2 — Rainforest integration
+## Database changes
 
-5. **Secret**: `RAINFOREST_API_KEY` (user provides after signup at rainforestapi.com).
-6. **Server fn** `refreshPartPrice({ partId })` — looks up the part's ASIN, calls Rainforest `type=product`, updates `parts.price` + `parts.price_updated_at`, inserts a `price_history` row. Auth-gated to the part owner.
-7. **UI**: in the parts library, each part gets an ASIN field, a "Refresh price" button, and shows "updated 2h ago".
+- Extend the existing `parts` table with a `visibility` column (`catalog` | `private`) and full part data in `data` jsonb.
+- Row-level rules:
+  - Anyone signed-in can read `catalog` parts. Only admin can insert/update/delete them.
+  - Users can fully manage their own `private` parts.
+- `builds` table stays user-scoped (already set up).
+- Add a `has_role` / `is_admin()` security-definer function that checks the JWT email.
+- Seed the current `SEED_PARTS` list into the catalog as admin-owned rows (one-time migration).
 
-## Phase 3 — Daily automation
+## App rewiring
 
-8. **Public cron endpoint** `/api/public/cron/refresh-prices` — HMAC-verified via a `CRON_SECRET`. Iterates all parts with an ASIN older than 20h and refreshes them (rate-limited, batched).
-9. **pg_cron job** scheduled daily at 03:00 UTC that POSTs to that endpoint with the shared secret.
+Replace the localStorage store with TanStack Query hooks calling authenticated server functions:
 
-## Phase 4 — Frontend refactor
+- `listParts()` → returns catalog + caller's private parts
+- `upsertPart(part)` / `deletePart(id)` → server enforces admin-only on catalog rows
+- `listBuilds()` / `saveBuild()` / `deleteBuild()` / `setActive()`
+- `refreshAmazonPrices()` → admin-only, updates catalog rows
+- One-time migration: on first sign-in, offer to import existing localStorage parts/builds into the user's account
 
-10. Replace `src/lib/pc/store.ts` (localStorage) with TanStack Query hooks calling authenticated server functions. All existing components (`PartForm`, `PartPickerDialog`, `builds.tsx`, `library.tsx`, `index.tsx`, share flow) get rewired.
-11. Add `_authenticated/` layout for the workbench, library, and builds pages. Keep `/share/$data` public.
+Route changes:
+- `/library`, `/builds`, `/` (workbench) move under `_authenticated/`
+- `/auth` and `/share/$data` stay public
+- Header shows sign-in state and sign-out
 
-## Cost + caveats
+## Out of scope (unless you say otherwise)
 
-- Rainforest: ~$0.003/request. 100 parts refreshed daily = ~$9/month. Only parts with an ASIN filled in get refreshed.
-- Currency is USD by default; can be parameterized per-user later.
-- Prices reflect Amazon's listed price at check time (not necessarily lowest).
+- Daily automated price refresh (cron) — you'll still hit "Refresh" manually; the button just becomes admin-only.
+- MCP tool updates — the existing MCP tools will keep working but read/write against the cloud instead of localStorage.
 
-## Scope
+## Technical notes
 
-Phase 4 alone touches ~10 files and is where most of the work is. If you'd rather do this in two chats — Phase 1+2 first (manual "Refresh" button working), then Phase 3 (cron) later — say so; otherwise I'll build all four phases in one go.
+- Admin check: `public.is_admin()` security-definer function comparing `auth.jwt() ->> 'email'` against the hardcoded admin email; used in RLS `WITH CHECK` on catalog rows.
+- Server functions live in `src/lib/parts.functions.ts` and `src/lib/builds.functions.ts`, all gated by `requireSupabaseAuth`.
+- `src/lib/pc/store.ts` becomes a thin adapter around TanStack Query — components mostly unchanged.
+- Google sign-in is enabled the same turn via `configure_social_auth`.
+- Landing page (`/`) stays public and links to `/auth`; the actual workbench moves to `/_authenticated/workbench` (or similar).
 
-Reply **approve** to start with Phase 1, or tell me what to change.
+Reply **approve** to start, or tell me what to change.

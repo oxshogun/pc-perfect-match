@@ -23,7 +23,7 @@ function rowToPart(row: PartRow): Part {
     asin: row.asin ?? undefined,
     visibility: row.visibility as "catalog" | "private",
     priceUpdatedAt: row.price_updated_at ? new Date(row.price_updated_at).getTime() : undefined,
-  } as Part;
+  } as unknown as Part;
 }
 
 function partToRowFields(part: Part) {

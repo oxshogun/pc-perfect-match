@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const inputSchema = z.object({
   items: z
@@ -30,20 +31,13 @@ async function fetchOne(asin: string, apiKey: string): Promise<Omit<PriceResult,
   url.searchParams.set("asin", asin);
   try {
     const res = await fetch(url.toString());
-    if (!res.ok) {
-      return { asin, error: `Rainforest ${res.status}` };
-    }
+    if (!res.ok) return { asin, error: `Rainforest ${res.status}` };
     const json = (await res.json()) as any;
     const buybox = json?.product?.buybox_winner;
     const price =
-      buybox?.price?.value ??
-      json?.product?.price?.value ??
-      buybox?.rrp?.value;
+      buybox?.price?.value ?? json?.product?.price?.value ?? buybox?.rrp?.value;
     const currency = buybox?.price?.currency ?? json?.product?.price?.currency ?? "USD";
-    const image =
-      json?.product?.main_image?.link ??
-      json?.product?.images?.[0]?.link ??
-      undefined;
+    const image = json?.product?.main_image?.link ?? json?.product?.images?.[0]?.link ?? undefined;
     if (typeof price !== "number") return { asin, error: "No price found", image };
     return { asin, price, currency, image };
   } catch (e) {
@@ -51,24 +45,53 @@ async function fetchOne(asin: string, apiKey: string): Promise<Omit<PriceResult,
   }
 }
 
+/**
+ * Admin-only: refreshes prices for the provided catalog parts and
+ * writes the results back to the database (parts.data.price, .imageUrl,
+ * and parts.price_updated_at).
+ */
 export const fetchAmazonPrices = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => inputSchema.parse(data))
-  .handler(async ({ data }): Promise<{ results: PriceResult[] }> => {
+  .handler(async ({ data, context }): Promise<{ results: PriceResult[] }> => {
+    const { data: adminCheck } = await context.supabase.rpc("is_admin");
+    if (!adminCheck) throw new Error("Only the admin can refresh catalog prices.");
+
     const apiKey = process.env.RAINFOREST_API_KEY;
     if (!apiKey) {
       return {
-        results: data.items.map((i) => ({
-          id: i.id,
-          asin: i.asin,
-          error: "Price service not configured",
-        })),
+        results: data.items.map((i) => ({ id: i.id, asin: i.asin, error: "Price service not configured" })),
       };
     }
-    // Sequential to be gentle on the API; Rainforest supports ~1/sec on lower tiers.
+
     const results: PriceResult[] = [];
     for (const item of data.items) {
       const r = await fetchOne(item.asin, apiKey);
       results.push({ id: item.id, ...r });
+
+      if (r.price != null) {
+        // Merge price + image into the row's data jsonb
+        const { data: row } = await context.supabase
+          .from("parts")
+          .select("data")
+          .eq("id", item.id)
+          .maybeSingle();
+        const currentData = (row?.data as Record<string, unknown>) ?? {};
+        const nextData = { ...currentData, price: r.price };
+        if (r.image) nextData.imageUrl = r.image;
+        await context.supabase
+          .from("parts")
+          .update({ data: nextData, price_updated_at: new Date().toISOString() })
+          .eq("id", item.id);
+
+        await context.supabase.from("price_history").insert({
+          part_id: item.id,
+          owner_id: context.userId,
+          price: r.price,
+          currency: r.currency ?? "USD",
+          source: "rainforest",
+        });
+      }
     }
     return { results };
   });

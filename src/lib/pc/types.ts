@@ -44,7 +44,10 @@ export interface BasePart {
   asin?: string;
   priceUpdatedAt?: number;
   imageUrl?: string;
+  /** 'catalog' = admin-curated shared part, 'private' = user's own part */
+  visibility?: "catalog" | "private";
 }
+
 
 
 export interface CpuPart extends BasePart {

@@ -6,10 +6,11 @@ export const applyPriceUpdates = (_: unknown) => {};
 export const getLastPriceRefresh = () => 0;
 export const isPriceRefreshDue = () => false;
 
+/*
  * Cloud-backed store, exposed with the same hook/helper surface the app used
- * when everything lived in localStorage. Reads go through TanStack Query;
- * writes call authenticated server functions and invalidate the cache.
+ * when everything lived in localStorage.
  */
+
 import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import type { Build, Part } from "./types";
 import {

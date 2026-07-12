@@ -71,13 +71,18 @@ function SharedBuild() {
     return p ? [p] : [];
   };
 
-  function importToLibrary() {
-    payload!.parts.forEach((p) => upsertPart(p));
-    const b = createBuild(`${payload!.name} (imported)`);
-    saveBuild({ ...b, parts: payload!.build });
-    setActiveBuildId(b.id);
-    toast.success("Imported to your library");
+  async function importToLibrary() {
+    try {
+      for (const p of payload!.parts) await upsertPart(p);
+      const b = await createBuild(`${payload!.name} (imported)`);
+      await saveBuild({ ...b, parts: payload!.build });
+      await setActiveBuildId(b.id);
+      toast.success("Imported to your library");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Import failed");
+    }
   }
+
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">

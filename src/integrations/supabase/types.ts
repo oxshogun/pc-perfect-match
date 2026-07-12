@@ -51,9 +51,10 @@ export type Database = {
           created_at: string
           data: Json
           id: string
-          owner_id: string
+          owner_id: string | null
           price_updated_at: string | null
           updated_at: string
+          visibility: string
         }
         Insert: {
           asin?: string | null
@@ -61,9 +62,10 @@ export type Database = {
           created_at?: string
           data: Json
           id?: string
-          owner_id: string
+          owner_id?: string | null
           price_updated_at?: string | null
           updated_at?: string
+          visibility?: string
         }
         Update: {
           asin?: string | null
@@ -71,9 +73,10 @@ export type Database = {
           created_at?: string
           data?: Json
           id?: string
-          owner_id?: string
+          owner_id?: string | null
           price_updated_at?: string | null
           updated_at?: string
+          visibility?: string
         }
         Relationships: []
       }
@@ -120,7 +123,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

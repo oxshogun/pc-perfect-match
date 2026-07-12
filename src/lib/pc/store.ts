@@ -1,4 +1,11 @@
 /**
+ * Cloud-backed store. Legacy exports kept as no-op stubs for old callers.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const applyPriceUpdates = (_: unknown) => {};
+export const getLastPriceRefresh = () => 0;
+export const isPriceRefreshDue = () => false;
+
  * Cloud-backed store, exposed with the same hook/helper surface the app used
  * when everything lived in localStorage. Reads go through TanStack Query;
  * writes call authenticated server functions and invalidate the cache.

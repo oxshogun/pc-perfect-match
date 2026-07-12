@@ -63,7 +63,7 @@ export const upsertPart = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => upsertInput.parse(d))
   .handler(async ({ data, context }): Promise<Part> => {
-    const part = data.part as Part;
+    const part = data.part as unknown as Part;
     const rowFields = partToRowFields(part);
     const visibility = data.visibility ?? part.visibility ?? "private";
 

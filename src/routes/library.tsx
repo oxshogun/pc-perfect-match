@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/library")({
+export const Route = createFileRoute("/library")({
   head: () => ({
     meta: [
       { title: "Parts library — RIG.LAB" },

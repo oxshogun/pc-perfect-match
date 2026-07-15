@@ -16,7 +16,7 @@ import { FilePlus, Share2, Trash2, Copy, ChevronRight, Star } from "lucide-react
 import { toast } from "sonner";
 import { useMemo } from "react";
 
-export const Route = createFileRoute("/builds")({
+export const Route = createFileRoute("/_authenticated/builds")({
   head: () => ({
     meta: [
       { title: "Saved builds — RIG.LAB" },

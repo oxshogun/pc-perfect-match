@@ -24,7 +24,7 @@ import { encodeShare } from "@/lib/pc/share";
 import { toast } from "sonner";
 import { Copy, FilePlus, Save, Share2, Zap } from "lucide-react";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_authenticated/")({
   component: BuilderPage,
 });
 

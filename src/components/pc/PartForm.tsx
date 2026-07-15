@@ -33,6 +33,7 @@ const COMMON_SOCKETS = ["AM4", "AM5", "LGA1151", "LGA1200", "LGA1700", "LGA1851"
 interface Props {
   category: PartCategory;
   initial?: Part;
+  visibility?: "catalog" | "private";
   onSaved: (p: Part) => void;
   onCancel: () => void;
 }
@@ -41,10 +42,11 @@ function newId(prefix: string) {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-export function PartForm({ category, initial, onSaved, onCancel }: Props) {
+export function PartForm({ category, initial, visibility = "private", onSaved, onCancel }: Props) {
+  const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState<Part>(() => {
     if (initial) return initial;
-    const base = { id: newId(category), name: "", brand: "", price: undefined as any };
+    const base = { id: newId(category), name: "", brand: "", price: undefined as any, visibility };
     switch (category) {
       case "cpu":
         return {
@@ -134,10 +136,15 @@ export function PartForm({ category, initial, onSaved, onCancel }: Props) {
     setDraft((d) => ({ ...d, [key]: value }) as Part);
   }
 
-  function submit() {
+  async function submit() {
     if (!draft.name.trim()) return;
-    upsertPart(draft);
-    onSaved(draft);
+    setSaving(true);
+    try {
+      const saved = await upsertPart({ ...draft, visibility } as Part);
+      onSaved(saved);
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -198,8 +205,8 @@ export function PartForm({ category, initial, onSaved, onCancel }: Props) {
         <Button variant="ghost" onClick={onCancel}>
           Cancel
         </Button>
-        <Button onClick={submit} disabled={!draft.name.trim()}>
-          Save part
+        <Button onClick={submit} disabled={!draft.name.trim() || saving}>
+          {saving ? "Saving…" : "Save part"}
         </Button>
       </div>
     </div>

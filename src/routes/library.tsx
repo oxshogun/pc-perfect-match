@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { CATEGORY_LABEL, CATEGORY_ORDER, type Part, type PartCategory } from "@/lib/pc/types";
@@ -7,9 +7,13 @@ import {
   deletePart,
   getLastPriceRefresh,
   isPriceRefreshDue,
+  useAuthUser,
+  useInvalidateAll,
+  useIsAdmin,
   useParts,
 } from "@/lib/pc/store";
 import { fetchAmazonPrices } from "@/lib/prices.functions";
+import { seedCatalog } from "@/lib/parts.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -58,15 +62,24 @@ function timeAgo(ts?: number) {
 
 function LibraryPage() {
   const parts = useParts();
+  const auth = useAuthUser();
+  const isAdmin = useIsAdmin();
+  const invalidateAll = useInvalidateAll();
   const [filter, setFilter] = useState<PartCategory | "all">("all");
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<Part | null>(null);
   const [creating, setCreating] = useState<PartCategory | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Part | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [seeding, setSeeding] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<number>(0);
   const refresh = useServerFn(fetchAmazonPrices);
+  const seed = useServerFn(seedCatalog);
   const autoRan = useRef(false);
+  const isSignedIn = Boolean(auth.data);
+
+  const catalogCount = useMemo(() => parts.filter((p) => p.visibility === "catalog").length, [parts]);
+  const privateCount = parts.length - catalogCount;
 
   const partsWithAsin = useMemo(
     () => parts.filter((p) => p.asin && /^[A-Z0-9]{10}$/i.test(p.asin)),
@@ -75,6 +88,7 @@ function LibraryPage() {
 
   async function runRefresh(silent = false) {
     if (refreshing) return;
+    if (!isAdmin) return;
     if (partsWithAsin.length === 0) {
       if (!silent) toast.info("Add an Amazon ASIN to a part first");
       return;
@@ -100,12 +114,26 @@ function LibraryPage() {
     }
   }
 
+  async function runSeed() {
+    if (seeding) return;
+    setSeeding(true);
+    try {
+      const result = await seed();
+      invalidateAll();
+      toast.success(result.inserted ? `Loaded ${result.inserted} catalog parts` : "Catalog already loaded");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Catalog seed failed");
+    } finally {
+      setSeeding(false);
+    }
+  }
+
   // Auto-refresh once per 24h when the library is opened.
   useEffect(() => {
     setLastRefresh(getLastPriceRefresh());
     if (autoRan.current) return;
     autoRan.current = true;
-    if (isPriceRefreshDue() && parts.some((p) => p.asin)) {
+    if (isAdmin && isPriceRefreshDue() && parts.some((p) => p.asin)) {
       void runRefresh(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -128,23 +156,32 @@ function LibraryPage() {
           <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-primary">Inventory</p>
           <h1 className="text-3xl font-bold tracking-tight">Parts library</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {parts.length} parts stored locally · {partsWithAsin.length} linked to Amazon
+            {catalogCount} catalog parts{privateCount ? ` · ${privateCount} private` : ""}
             {lastRefresh ? ` · prices ${timeAgo(lastRefresh)}` : ""}
           </p>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => runRefresh(false)}
-          disabled={refreshing || partsWithAsin.length === 0}
-          title={
-            partsWithAsin.length === 0
-              ? "Add an Amazon ASIN to a part to enable price updates"
-              : "Fetch latest Amazon prices"
-          }
-        >
-          <RefreshCw className={`h-4 w-4 mr-1 ${refreshing ? "animate-spin" : ""}`} />
-          {refreshing ? "Refreshing…" : "Refresh prices"}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {isAdmin && catalogCount === 0 && (
+            <Button variant="outline" onClick={runSeed} disabled={seeding}>
+              <Plus className="h-4 w-4 mr-1" /> {seeding ? "Loading…" : "Load default catalog"}
+            </Button>
+          )}
+          {isAdmin && (
+            <Button
+              variant="outline"
+              onClick={() => runRefresh(false)}
+              disabled={refreshing || partsWithAsin.length === 0}
+              title={
+                partsWithAsin.length === 0
+                  ? "Add an Amazon ASIN to a part to enable price updates"
+                  : "Fetch latest Amazon prices"
+              }
+            >
+              <RefreshCw className={`h-4 w-4 mr-1 ${refreshing ? "animate-spin" : ""}`} />
+              {refreshing ? "Refreshing…" : "Refresh prices"}
+            </Button>
+          )}
+        </div>
       </div>
 
 
@@ -187,9 +224,14 @@ function LibraryPage() {
             className="pl-8"
           />
         </div>
-        {filter !== "all" && (
+        {filter !== "all" && isSignedIn && (
           <Button onClick={() => setCreating(filter)}>
             <Plus className="h-4 w-4 mr-1" /> Add {CATEGORY_LABEL[filter]}
+          </Button>
+        )}
+        {filter !== "all" && !isSignedIn && (
+          <Button asChild variant="outline">
+            <Link to="/auth" search={{ next: "/library" }}>Sign in to add</Link>
           </Button>
         )}
       </div>
@@ -197,7 +239,7 @@ function LibraryPage() {
       {filtered.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border py-16 text-center">
           <p className="text-muted-foreground">Nothing here yet.</p>
-          {filter !== "all" && (
+          {filter !== "all" && isSignedIn && (
             <Button className="mt-3" onClick={() => setCreating(filter)}>
               <Plus className="h-4 w-4 mr-1" /> Add first {CATEGORY_LABEL[filter].toLowerCase()}
             </Button>
@@ -236,17 +278,21 @@ function LibraryPage() {
                 </div>
               )}
 
-              <Button variant="ghost" size="icon" onClick={() => setEditing(p)}>
-                <Pencil className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setConfirmDelete(p)}
-                className="text-muted-foreground hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              {(p.visibility !== "catalog" || isAdmin) && (
+                <>
+                  <Button variant="ghost" size="icon" onClick={() => setEditing(p)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setConfirmDelete(p)}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
             </div>
           ))}
         </div>
@@ -263,6 +309,7 @@ function LibraryPage() {
             <PartForm
               category={(editing?.category ?? creating)!}
               initial={editing ?? undefined}
+              visibility={editing?.visibility ?? (isAdmin ? "catalog" : "private")}
               onCancel={() => {
                 setEditing(null);
                 setCreating(null);
@@ -290,7 +337,7 @@ function LibraryPage() {
             <AlertDialogAction
               onClick={() => {
                 if (confirmDelete) {
-                  deletePart(confirmDelete.id);
+                  void deletePart(confirmDelete.id);
                   toast.success("Part deleted");
                 }
                 setConfirmDelete(null);

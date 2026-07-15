@@ -12,6 +12,8 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { authUserKey, bindQueryClient, buildsKey, partsKey, whoAmIKey } from "@/lib/pc/store";
 import { Cpu } from "lucide-react";
 
 function NotFoundComponent() {
@@ -176,6 +178,18 @@ function NavLink({ to, children }: { to: string; children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  bindQueryClient(queryClient);
+
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
+      queryClient.invalidateQueries({ queryKey: authUserKey });
+      queryClient.invalidateQueries({ queryKey: partsKey });
+      queryClient.invalidateQueries({ queryKey: whoAmIKey });
+      if (event === "SIGNED_OUT") queryClient.removeQueries({ queryKey: buildsKey });
+    });
+    return () => data.subscription.unsubscribe();
+  }, [queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>

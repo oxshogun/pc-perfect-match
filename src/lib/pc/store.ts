@@ -13,6 +13,7 @@ export const isPriceRefreshDue = () => false;
 
 import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import type { Build, Part } from "./types";
+import { supabase } from "@/integrations/supabase/client";
 import {
   listParts,
   upsertPart as upsertPartFn,
@@ -45,6 +46,7 @@ function invalidate(...keys: string[]) {
 export const partsKey = ["parts"] as const;
 export const buildsKey = ["builds"] as const;
 export const whoAmIKey = ["whoami"] as const;
+export const authUserKey = ["auth-user"] as const;
 
 /* ---- Types ---- */
 
@@ -66,6 +68,19 @@ export function useParts(): Part[] {
   return q.data ?? [];
 }
 
+export function useAuthUser() {
+  return useQuery({
+    queryKey: authUserKey,
+    queryFn: async () => {
+      const { data, error } = await supabase.auth.getUser();
+      if (error || !data.user) return null;
+      return { id: data.user.id, email: data.user.email ?? null };
+    },
+    retry: false,
+    staleTime: 60_000,
+  });
+}
+
 export function useBuilds(): Build[] {
   const q = useQuery({ queryKey: buildsKey, queryFn: () => listBuilds(), staleTime: 30_000 });
   return q.data ?? [];
@@ -81,7 +96,14 @@ export function useActiveBuildId(): string {
 }
 
 export function useWhoAmI() {
-  return useQuery({ queryKey: whoAmIKey, queryFn: () => whoAmI(), staleTime: 5 * 60_000 });
+  const auth = useAuthUser();
+  return useQuery({
+    queryKey: whoAmIKey,
+    queryFn: () => whoAmI(),
+    enabled: Boolean(auth.data),
+    retry: false,
+    staleTime: 5 * 60_000,
+  });
 }
 
 export function useIsAdmin(): boolean {
@@ -91,10 +113,11 @@ export function useIsAdmin(): boolean {
 
 /* ---- Imperative helpers (call server fns + invalidate) ---- */
 
-export async function upsertPart(part: Part) {
+export async function upsertPart(part: Part): Promise<Part> {
   const visibility = (part as any).visibility as "catalog" | "private" | undefined;
-  await upsertPartFn({ data: { part: part as any, visibility } });
+  const saved = await upsertPartFn({ data: { part: part as any, visibility } });
   invalidate("parts");
+  return saved;
 }
 
 export async function deletePart(id: string) {

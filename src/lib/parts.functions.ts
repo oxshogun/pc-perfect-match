@@ -1,6 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
+import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Database } from "@/integrations/supabase/types";
 import { SEED_PARTS } from "@/lib/pc/seed";
 import type { Part, PartCategory } from "@/lib/pc/types";
 
@@ -39,9 +42,34 @@ function partToRowFields(part: Part) {
 /* ---------------- List ---------------- */
 
 export const listParts = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<Part[]> => {
-    const { data, error } = await context.supabase
+  .handler(async (): Promise<Part[]> => {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_PUBLISHABLE_KEY;
+    if (!supabaseUrl || !supabaseKey) throw new Error("Backend is not configured.");
+
+    const request = getRequest();
+    const authHeader = request?.headers.get("authorization") ?? undefined;
+    const token = authHeader?.startsWith("Bearer ") ? authHeader.replace("Bearer ", "") : undefined;
+    const headers = token && token.split(".").length === 3 ? { Authorization: `Bearer ${token}` } : undefined;
+    const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
+      auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+      global: {
+        headers,
+        fetch: (input, init) => {
+          const nextHeaders = new Headers(
+            typeof Request !== "undefined" && input instanceof Request ? input.headers : undefined,
+          );
+          if (init?.headers) new Headers(init.headers).forEach((value, key) => nextHeaders.set(key, value));
+          if (supabaseKey.startsWith("sb_") && nextHeaders.get("Authorization") === `Bearer ${supabaseKey}`) {
+            nextHeaders.delete("Authorization");
+          }
+          nextHeaders.set("apikey", supabaseKey);
+          return fetch(input, { ...init, headers: nextHeaders });
+        },
+      },
+    });
+
+    const { data, error } = await supabase
       .from("parts")
       .select("id, owner_id, category, asin, visibility, price_updated_at, data")
       .order("category")

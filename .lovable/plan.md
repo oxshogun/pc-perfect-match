@@ -1,54 +1,29 @@
-# Locked catalog + private user parts
+# 3D part models + assembled PC preview
 
-## What visitors will see
+Add lightweight, code-generated 3D models for every part category, and a floating 3D preview of the full rig in the bottom-right of the builder.
 
-- Landing page + share links stay public.
-- To use the workbench, library, or builds they sign in (Google or email/password).
-- The parts library shows two sections:
-  - **Catalog** — the parts you (admin) curate. Everyone can see them and use them in builds, but only you can add/edit/delete/refresh prices.
-  - **My parts** — a visitor's own additions. Private to them; they can freely add/edit/delete.
-- Builds are private to each user and follow them across devices.
+## What you'll get
 
-## Admin
+**3D part models**
+- Every part category (CPU, cooler, motherboard, RAM, GPU, storage, PSU, case) gets a stylized low-poly 3D model built from simple shapes, colored with the app's dark hardware palette.
+- Because they're generated in code, all 200+ catalog parts get a model instantly — no per-part 3D files, no extra load time.
+- Model shape adapts to real specs where it's meaningful: GPU length, cooler height/AIO vs air, case form factor, RAM stick count, board size.
 
-You're identified by the email **landonjamesmckale@gmail.com**. Sign in with Google (or email/password) using that address and the admin controls (add part, edit, delete, refresh prices) appear. Every other signed-in user sees the catalog as read-only.
+**Where they appear**
+- Part picker dialog and builder slots: hovering/selecting a part shows a small rotating 3D model instead of the flat icon (existing Amazon photo still wins when one exists; 3D is the fallback and the "spin it" view).
+- Library page: a "3D" toggle on each row to spin the model.
 
-## Database changes
-
-- Extend the existing `parts` table with a `visibility` column (`catalog` | `private`) and full part data in `data` jsonb.
-- Row-level rules:
-  - Anyone signed-in can read `catalog` parts. Only admin can insert/update/delete them.
-  - Users can fully manage their own `private` parts.
-- `builds` table stays user-scoped (already set up).
-- Add a `has_role` / `is_admin()` security-definer function that checks the JWT email.
-- Seed the current `SEED_PARTS` list into the catalog as admin-owned rows (one-time migration).
-
-## App rewiring
-
-Replace the localStorage store with TanStack Query hooks calling authenticated server functions:
-
-- `listParts()` → returns catalog + caller's private parts
-- `upsertPart(part)` / `deletePart(id)` → server enforces admin-only on catalog rows
-- `listBuilds()` / `saveBuild()` / `deleteBuild()` / `setActive()`
-- `refreshAmazonPrices()` → admin-only, updates catalog rows
-- One-time migration: on first sign-in, offer to import existing localStorage parts/builds into the user's account
-
-Route changes:
-- `/library`, `/builds`, `/` (workbench) move under `_authenticated/`
-- `/auth` and `/share/$data` stay public
-- Header shows sign-in state and sign-out
-
-## Out of scope (unless you say otherwise)
-
-- Daily automated price refresh (cron) — you'll still hit "Refresh" manually; the button just becomes admin-only.
-- MCP tool updates — the existing MCP tools will keep working but read/write against the cloud instead of localStorage.
+**Assembled PC preview (bottom-right)**
+- Floating panel pinned bottom-right of the builder page: the case as a semi-transparent shell with the motherboard, CPU cooler, GPU, RAM sticks, drives, and PSU placed inside at realistic positions.
+- Drag to rotate, scroll to zoom, slow auto-spin when idle.
+- Parts you haven't picked appear as dim ghost outlines, so it fills in as you build.
+- Collapse button to minimize to a small tab, and expand button for a fullscreen viewer.
+- Parts flagged by the compatibility engine glow red (e.g. GPU too long for the case) so the fault is visible in space.
 
 ## Technical notes
 
-- Admin check: `public.is_admin()` security-definer function comparing `auth.jwt() ->> 'email'` against the hardcoded admin email; used in RLS `WITH CHECK` on catalog rows.
-- Server functions live in `src/lib/parts.functions.ts` and `src/lib/builds.functions.ts`, all gated by `requireSupabaseAuth`.
-- `src/lib/pc/store.ts` becomes a thin adapter around TanStack Query — components mostly unchanged.
-- Google sign-in is enabled the same turn via `configure_social_auth`.
-- Landing page (`/`) stays public and links to `/auth`; the actual workbench moves to `/_authenticated/workbench` (or similar).
-
-Reply **approve** to start, or tell me what to change.
+- Add `three`, `@react-three/fiber`, `@react-three/drei` (WebGL renders client-side only).
+- New `src/components/pc/three/` folder: one `partMeshes.tsx` with a mesh component per category driven by part specs, `PartModelViewer.tsx` (single part), and `BuildViewer.tsx` (assembled rig with layout constants for mount positions).
+- All viewers are loaded with `React.lazy` behind `<ClientOnly>` so SSR/prerender never imports three.js; a static icon renders during hydration.
+- Canvases use `frameloop="demand"`-style throttling and are unmounted when collapsed, to keep the builder page light.
+- No changes to the compatibility engine, database, parts data model, or auth — issue severity is read from the existing `analyze()` output, and the viewer only consumes resolved parts.

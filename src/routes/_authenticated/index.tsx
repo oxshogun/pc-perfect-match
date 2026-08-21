@@ -224,9 +224,10 @@ function BuilderPage() {
       <BuildPreviewPanel
         resolved={resolved}
         faults={issues
-          .filter((i) => i.level === "error")
-          .flatMap((i) => i.categories ?? [])}
+          .filter((i) => i.level === "error" && !!i.category)
+          .map((i) => i.category as PartCategory)}
       />
+
     </div>
   );
 }

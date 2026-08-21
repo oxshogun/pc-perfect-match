@@ -12,8 +12,12 @@ interface Props {
 
 export default function PartModelViewer({ part, category, static: isStatic }: Props) {
   return (
-    <Canvas camera={{ position: [3.2, 2.2, 3.6], fov: 40 }} dpr={[1, 1.75]} gl={{ antialias: true }}>
-      <color attach="background" args={["#0d1520"]} />
+    <Canvas
+      camera={{ position: [3.2, 2.2, 3.6], fov: 40 }}
+      dpr={[1, 1.75]}
+      gl={{ antialias: true }}
+      style={{ background: "#0d1520" }}
+    >
       <ambientLight intensity={0.55} />
       <directionalLight position={[4, 6, 4]} intensity={1.5} />
       <directionalLight position={[-5, -2, -4]} intensity={0.5} color="#5fe4f0" />

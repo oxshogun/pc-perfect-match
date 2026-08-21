@@ -59,7 +59,7 @@ export function PartSlot({ category, parts, onAdd, onRemove, multiple }: Props) 
         <ul className="divide-y divide-border">
           {parts.map((p) => (
             <li key={p.id} className="flex items-start gap-3 px-4 py-3">
-              <PartThumb category={p.category} src={p.imageUrl} alt={p.name} size="md" />
+              <PartThumb category={p.category} src={p.imageUrl} alt={p.name} size="md" part={p} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   {p.brand && (

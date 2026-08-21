@@ -100,7 +100,7 @@ export function PartPickerDialog({ open, onOpenChange, category, onPick, multipl
                     className="w-full text-left rounded-md border border-border bg-surface hover:border-primary/60 hover:bg-surface-elevated transition-colors p-3 group"
                   >
                     <div className="flex items-start gap-3">
-                      <PartThumb category={p.category} src={p.imageUrl} alt={p.name} size="md" />
+                      <PartThumb category={p.category} src={p.imageUrl} alt={p.name} size="md" part={p} />
                       <div className="flex-1 flex items-start justify-between gap-3 min-w-0">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">

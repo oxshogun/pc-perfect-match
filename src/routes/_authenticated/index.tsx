@@ -21,6 +21,7 @@ import {
   resolveBuild,
 } from "@/lib/pc/compat";
 import { encodeShare } from "@/lib/pc/share";
+import { BuildPreviewPanel } from "@/components/pc/three/BuildPreviewPanel";
 import { toast } from "sonner";
 import { Copy, FilePlus, Save, Share2, Zap } from "lucide-react";
 

@@ -21,6 +21,7 @@ import {
   resolveBuild,
 } from "@/lib/pc/compat";
 import { encodeShare } from "@/lib/pc/share";
+import { BuildPreviewPanel } from "@/components/pc/three/BuildPreviewPanel";
 import { toast } from "sonner";
 import { Copy, FilePlus, Save, Share2, Zap } from "lucide-react";
 
@@ -219,6 +220,14 @@ function BuilderPage() {
           multiple={MULTIPLE_CATEGORIES.includes(pickerFor)}
         />
       )}
+
+      <BuildPreviewPanel
+        resolved={resolved}
+        faults={issues
+          .filter((i) => i.level === "error" && !!i.category)
+          .map((i) => i.category as PartCategory)}
+      />
+
     </div>
   );
 }

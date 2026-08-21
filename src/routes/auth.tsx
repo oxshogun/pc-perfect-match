@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { ClientOnly, createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
@@ -14,12 +14,19 @@ function isSafeNext(next: string | undefined): next is string {
 }
 
 export const Route = createFileRoute("/auth")({
-  ssr: false,
   validateSearch: (s: Record<string, unknown>) => ({
     next: typeof s.next === "string" ? s.next : undefined,
   }),
-  component: AuthPage,
+  component: AuthRoute,
 });
+
+function AuthRoute() {
+  return (
+    <ClientOnly fallback={<div className="min-h-svh" />}>
+      <AuthPage />
+    </ClientOnly>
+  );
+}
 
 function AuthPage() {
   const { next } = Route.useSearch();

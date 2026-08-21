@@ -85,8 +85,11 @@ function Rig({ resolved, faults = [] }: Props) {
 
 export default function BuildViewer({ resolved, faults }: Props) {
   return (
-    <Canvas camera={{ position: [-3.4, 1.9, 3.8], fov: 38 }} dpr={[1, 1.75]}>
-      <color attach="background" args={["#0b1219"]} />
+    <Canvas
+      camera={{ position: [-3.4, 1.9, 3.8], fov: 38 }}
+      dpr={[1, 1.75]}
+      style={{ background: "#0b1219" }}
+    >
       <ambientLight intensity={0.6} />
       <directionalLight position={[-4, 5, 5]} intensity={1.4} />
       <directionalLight position={[4, -1, -4]} intensity={0.6} color="#5fe4f0" />

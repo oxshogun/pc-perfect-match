@@ -220,6 +220,13 @@ function BuilderPage() {
           multiple={MULTIPLE_CATEGORIES.includes(pickerFor)}
         />
       )}
+
+      <BuildPreviewPanel
+        resolved={resolved}
+        faults={issues
+          .filter((i) => i.level === "error")
+          .flatMap((i) => i.categories ?? [])}
+      />
     </div>
   );
 }

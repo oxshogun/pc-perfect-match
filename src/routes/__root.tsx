@@ -15,6 +15,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { authUserKey, bindQueryClient, buildsKey, partsKey, whoAmIKey } from "@/lib/pc/store";
 import { Cpu } from "lucide-react";
+import { getStoredTheme } from "@/lib/pc/themes";
 
 function NotFoundComponent() {
   return (
@@ -147,6 +148,7 @@ function TopNav() {
           <NavLink to="/">Builder</NavLink>
           <NavLink to="/library">Library</NavLink>
           <NavLink to="/builds">Builds</NavLink>
+          <NavLink to="/themes">Themes</NavLink>
         </nav>
         <div className="ml-auto hidden md:flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
           <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
@@ -179,6 +181,11 @@ function NavLink({ to, children }: { to: string; children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   bindQueryClient(queryClient);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = getStoredTheme();
+  }, []);
+
 
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event) => {

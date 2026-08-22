@@ -182,6 +182,11 @@ function RootComponent() {
   bindQueryClient(queryClient);
 
   useEffect(() => {
+    document.documentElement.dataset.theme = getStoredTheme();
+  }, []);
+
+
+  useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
       queryClient.invalidateQueries({ queryKey: authUserKey });

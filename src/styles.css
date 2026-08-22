@@ -311,7 +311,7 @@
   box-shadow: var(--glow-destructive);
 }
 @utility text-glow {
-  text-shadow: 0 0 12px oklch(0.84 0.16 195 / 0.55);
+  text-shadow: 0 0 12px color-mix(in oklab, var(--primary) 55%, transparent);
 }
 @utility grid-lines {
   background-image:

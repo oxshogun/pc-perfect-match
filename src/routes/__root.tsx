@@ -147,6 +147,7 @@ function TopNav() {
           <NavLink to="/">Builder</NavLink>
           <NavLink to="/library">Library</NavLink>
           <NavLink to="/builds">Builds</NavLink>
+          <NavLink to="/themes">Themes</NavLink>
         </nav>
         <div className="ml-auto hidden md:flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
           <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />

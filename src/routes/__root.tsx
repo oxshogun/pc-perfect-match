@@ -15,6 +15,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { authUserKey, bindQueryClient, buildsKey, partsKey, whoAmIKey } from "@/lib/pc/store";
 import { Cpu } from "lucide-react";
+import { getStoredTheme } from "@/lib/pc/themes";
 
 function NotFoundComponent() {
   return (

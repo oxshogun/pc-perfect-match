@@ -154,6 +154,8 @@ function BuilderPage() {
         </div>
       </div>
 
+      <BuildGuide className="mb-6" />
+
       {/* Stat strip */}
       <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-3">
         <Stat label="Est. price" value={`$${price.toLocaleString()}`} accent />
@@ -222,6 +224,8 @@ function BuilderPage() {
           </p>
         </div>
       </div>
+
+      <AiAssistantBox className="mt-6" />
 
       {pickerFor && (
         <PartPickerDialog

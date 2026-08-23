@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { BuildGuide } from "@/components/pc/BuildGuide";
+import { AiAssistantBox } from "@/components/pc/AiAssistantBox";
 import { PartSlot } from "@/components/pc/PartSlot";
 import { PartPickerDialog } from "@/components/pc/PartPickerDialog";
 import { CompatibilityPanel } from "@/components/pc/CompatibilityPanel";
@@ -27,6 +29,16 @@ import { Copy, FilePlus, Save, Share2, Zap } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/")({
   component: BuilderPage,
+  head: () => ({
+    meta: [
+      { title: "Workbench — RIG.LAB" },
+      { name: "description", content: "Assemble your PC part-by-part and run a live compatibility, wattage, and price audit." },
+      { property: "og:title", content: "Workbench — RIG.LAB" },
+      { property: "og:description", content: "Assemble your PC part-by-part and run a live compatibility, wattage, and price audit." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
 });
 
 const MULTIPLE_CATEGORIES: PartCategory[] = ["ram", "storage"];
@@ -142,6 +154,8 @@ function BuilderPage() {
         </div>
       </div>
 
+      <BuildGuide className="mb-6" />
+
       {/* Stat strip */}
       <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-3">
         <Stat label="Est. price" value={`$${price.toLocaleString()}`} accent />
@@ -210,6 +224,8 @@ function BuilderPage() {
           </p>
         </div>
       </div>
+
+      <AiAssistantBox className="mt-6" />
 
       {pickerFor && (
         <PartPickerDialog

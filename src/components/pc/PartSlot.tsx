@@ -1,4 +1,5 @@
 import { CATEGORY_LABEL, type Part, type PartCategory } from "@/lib/pc/types";
+import { CATEGORY_DESCRIPTION } from "@/lib/pc/guide";
 import { Button } from "@/components/ui/button";
 import { Cpu, HardDrive, MemoryStick, Power, Box, Fan, MonitorPlay, Wrench, Plus, X } from "lucide-react";
 import { partSummary } from "./partSummary";
@@ -47,6 +48,9 @@ export function PartSlot({ category, parts, onAdd, onRemove, multiple }: Props) 
           )}
         </div>
       </div>
+      <p className="px-4 py-2 text-xs text-muted-foreground/80 bg-card/50">
+        {CATEGORY_DESCRIPTION[category]}
+      </p>
 
       {empty ? (
         <button

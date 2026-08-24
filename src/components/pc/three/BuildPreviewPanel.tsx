@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState } from "react";
 import { ClientOnly } from "@tanstack/react-router";
-import { Boxes, ChevronDown, Maximize2, X } from "lucide-react";
+import { Boxes, ChevronDown, Maximize2, Move3d, X } from "lucide-react";
 import type { ResolvedBuild } from "@/lib/pc/compat";
 import type { PartCategory } from "@/lib/pc/types";
 
@@ -22,6 +22,7 @@ function Placeholder() {
 export function BuildPreviewPanel({ resolved, faults }: Props) {
   const [open, setOpen] = useState(true);
   const [full, setFull] = useState(false);
+  const [explode, setExplode] = useState(false);
 
   if (!open) {
     return (
@@ -44,6 +45,15 @@ export function BuildPreviewPanel({ resolved, faults }: Props) {
           </span>
           <div className="ml-auto flex items-center gap-1">
             <button
+              onClick={() => setExplode((v) => !v)}
+              aria-label="Toggle exploded view"
+              aria-pressed={explode}
+              title={explode ? "Assembled view" : "Exploded view"}
+              className={`rounded p-1 ${explode ? "text-primary" : "text-muted-foreground"} hover:text-primary`}
+            >
+              <Move3d className="h-3.5 w-3.5" />
+            </button>
+            <button
               onClick={() => setFull(true)}
               aria-label="Expand preview"
               className="rounded p-1 text-muted-foreground hover:text-primary"
@@ -62,7 +72,7 @@ export function BuildPreviewPanel({ resolved, faults }: Props) {
         <div className="h-[220px]">
           <ClientOnly fallback={<Placeholder />}>
             <Suspense fallback={<Placeholder />}>
-              <BuildViewer resolved={resolved} faults={faults} />
+              <BuildViewer resolved={resolved} faults={faults} explode={explode} />
             </Suspense>
           </ClientOnly>
         </div>
@@ -70,6 +80,14 @@ export function BuildPreviewPanel({ resolved, faults }: Props) {
 
       {full && (
         <div className="fixed inset-0 z-50 bg-background/95 p-4">
+          <button
+            onClick={() => setExplode((v) => !v)}
+            aria-label="Toggle exploded view"
+            aria-pressed={explode}
+            className={`absolute right-20 top-6 z-10 flex items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-2 font-mono text-[10px] uppercase tracking-[0.22em] ${explode ? "text-primary" : "text-muted-foreground"} hover:text-primary`}
+          >
+            <Move3d className="h-4 w-4" /> {explode ? "Assembled" : "Explode"}
+          </button>
           <button
             onClick={() => setFull(false)}
             aria-label="Close fullscreen preview"
@@ -80,7 +98,7 @@ export function BuildPreviewPanel({ resolved, faults }: Props) {
           <div className="h-full w-full overflow-hidden rounded-lg border border-border">
             <ClientOnly fallback={<Placeholder />}>
               <Suspense fallback={<Placeholder />}>
-                <BuildViewer resolved={resolved} faults={faults} />
+                <BuildViewer resolved={resolved} faults={faults} explode={explode} />
               </Suspense>
             </ClientOnly>
           </div>

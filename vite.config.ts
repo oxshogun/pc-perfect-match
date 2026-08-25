@@ -7,11 +7,32 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/tanstack/vite";
 
+/**
+ * The dev source-tagger adds `data-tsd-source="..."` to every JSX element.
+ * react-three-fiber treats dashed props as nested property paths and throws
+ * (`Cannot set "data-tsd-source"`), so strip the attribute from three.js scene files.
+ */
+function stripSourceTagsFromThreeFiles() {
+  return {
+    name: "strip-tsd-source-in-three",
+    enforce: "post" as const,
+    apply: "serve" as const,
+    transform(code: string, id: string) {
+      if (!id.includes("/components/pc/three/")) return null;
+      if (!code.includes("data-tsd-source")) return null;
+      return {
+        code: code.replace(/\s*"data-tsd-source":\s*"[^"]*",?/g, "").replace(/\s*data-tsd-source="[^"]*"/g, ""),
+        map: null,
+      };
+    },
+  };
+}
+
 export default defineConfig({
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
     server: { entry: "server" },
   },
-  plugins: [mcpPlugin()],
+  plugins: [mcpPlugin(), stripSourceTagsFromThreeFiles()],
 });

@@ -2,6 +2,7 @@ import { useMemo, useRef, type ReactNode } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import type { Group } from "three";
+import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import type { ResolvedBuild } from "@/lib/pc/compat";
 import type { PartCategory } from "@/lib/pc/types";
 import {
@@ -222,6 +223,7 @@ export default function BuildViewer({
       <pointLight position={[-0.6, 0.2, -0.4]} intensity={2.2} color="#5fe4f0" distance={3} />
       <Rig resolved={resolved} faults={faults} explode={explode} />
       <OrbitControls
+        ref={controlsRef}
         enablePan={false}
         autoRotate
         autoRotateSpeed={0.8}

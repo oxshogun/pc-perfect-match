@@ -200,7 +200,12 @@ function Rig({ resolved, faults = [], explode = false }: Props) {
   );
 }
 
-export default function BuildViewer({ resolved, faults, explode }: Props) {
+export default function BuildViewer({
+  resolved,
+  faults,
+  explode,
+  controlsRef,
+}: Props & { controlsRef?: React.Ref<OrbitControlsImpl> }) {
   const C = caseDims(resolved.case);
   const span = Math.max(C.h, C.d);
   const dist = span * 2.1;

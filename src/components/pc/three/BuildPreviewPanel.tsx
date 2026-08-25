@@ -3,6 +3,7 @@ import { ClientOnly } from "@tanstack/react-router";
 import { Boxes, ChevronDown, Maximize2, Move3d, X } from "lucide-react";
 import type { ResolvedBuild } from "@/lib/pc/compat";
 import type { PartCategory } from "@/lib/pc/types";
+import { ZoomControls, useZoomControls } from "./ZoomControls";
 
 const BuildViewer = lazy(() => import("./BuildViewer"));
 
@@ -23,6 +24,8 @@ export function BuildPreviewPanel({ resolved, faults }: Props) {
   const [open, setOpen] = useState(true);
   const [full, setFull] = useState(false);
   const [explode, setExplode] = useState(false);
+  const panelZoom = useZoomControls();
+  const fullZoom = useZoomControls();
 
   if (!open) {
     return (
@@ -69,12 +72,22 @@ export function BuildPreviewPanel({ resolved, faults }: Props) {
             </button>
           </div>
         </div>
-        <div className="h-[220px]">
+        <div className="relative h-[220px]">
           <ClientOnly fallback={<Placeholder />}>
             <Suspense fallback={<Placeholder />}>
-              <BuildViewer resolved={resolved} faults={faults} explode={explode} />
+              <BuildViewer
+                resolved={resolved}
+                faults={faults}
+                explode={explode}
+                controlsRef={panelZoom.controlsRef}
+              />
             </Suspense>
           </ClientOnly>
+          <ZoomControls
+            onZoomIn={panelZoom.zoomIn}
+            onZoomOut={panelZoom.zoomOut}
+            className="absolute bottom-2 right-2"
+          />
         </div>
       </div>
 
@@ -95,12 +108,22 @@ export function BuildPreviewPanel({ resolved, faults }: Props) {
           >
             <X className="h-4 w-4" />
           </button>
-          <div className="h-full w-full overflow-hidden rounded-lg border border-border">
+          <div className="relative h-full w-full overflow-hidden rounded-lg border border-border">
             <ClientOnly fallback={<Placeholder />}>
               <Suspense fallback={<Placeholder />}>
-                <BuildViewer resolved={resolved} faults={faults} explode={explode} />
+                <BuildViewer
+                  resolved={resolved}
+                  faults={faults}
+                  explode={explode}
+                  controlsRef={fullZoom.controlsRef}
+                />
               </Suspense>
             </ClientOnly>
+            <ZoomControls
+              onZoomIn={fullZoom.zoomIn}
+              onZoomOut={fullZoom.zoomOut}
+              className="absolute bottom-4 right-4"
+            />
           </div>
         </div>
       )}

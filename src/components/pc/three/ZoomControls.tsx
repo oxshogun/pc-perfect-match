@@ -5,24 +5,42 @@ import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 export function useZoomControls() {
   const controlsRef = useRef<OrbitControlsImpl>(null);
 
+  // factor < 1 moves the camera closer (zoom in), > 1 moves it away (zoom out).
   const zoom = useCallback((factor: number) => {
-    const controls = controlsRef.current;
+    const controls = controlsRef.current as any;
     if (!controls) return;
-    // drei forwards the underlying Three.js OrbitControls instance.
-    // dollyIn/dollyOut move the camera toward/away from target by a ratio.
-    if (factor < 1) {
-      (controls as any).dollyIn(factor);
-    } else {
-      (controls as any).dollyOut(factor);
-    }
+    const camera = controls.object;
+    const target = controls.target;
+    if (!camera || !target) return;
+
+    const offsetX = camera.position.x - target.x;
+    const offsetY = camera.position.y - target.y;
+    const offsetZ = camera.position.z - target.z;
+    const distance = Math.sqrt(offsetX * offsetX + offsetY * offsetY + offsetZ * offsetZ);
+    if (distance === 0) return;
+
+    const min = typeof controls.minDistance === "number" ? controls.minDistance : 0.01;
+    const max = typeof controls.maxDistance === "number" && Number.isFinite(controls.maxDistance)
+      ? controls.maxDistance
+      : Number.POSITIVE_INFINITY;
+    const next = Math.min(Math.max(distance * factor, min), max);
+    const scale = next / distance;
+
+    camera.position.set(
+      target.x + offsetX * scale,
+      target.y + offsetY * scale,
+      target.z + offsetZ * scale,
+    );
+    camera.updateProjectionMatrix?.();
     controls.update();
   }, []);
 
-  const zoomIn = useCallback(() => zoom(0.85), [zoom]);
-  const zoomOut = useCallback(() => zoom(1.18), [zoom]);
+  const zoomIn = useCallback(() => zoom(0.8), [zoom]);
+  const zoomOut = useCallback(() => zoom(1.25), [zoom]);
 
   return { controlsRef, zoomIn, zoomOut };
 }
+
 
 interface ZoomControlsProps {
   onZoomIn: () => void;

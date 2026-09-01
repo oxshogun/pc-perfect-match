@@ -259,9 +259,51 @@ export function mbLayout(part?: MotherboardPart) {
   };
 }
 
-export function gpuDims(part?: GpuPart) {
+/** Usable inner volume of the case (half-extents), after panel thickness. */
+export function caseInterior(part?: CasePart) {
+  const { w, h, d } = caseDims(part);
+  const pad = mm(10);
+  return {
+    hx: w / 2 - pad,
+    hy: h / 2 - pad,
+    hz: d / 2 - pad,
+    w: w - pad * 2,
+    h: h - pad * 2,
+    d: d - pad * 2,
+  };
+}
+
+/**
+ * Picks a legal mount + size for an AIO radiator inside the case.
+ * Falls back roof -> front -> largest supported size, flagging a fit fault.
+ */
+export function radiatorPlan(cooler?: CoolerPart, box?: CasePart) {
+  const I = caseInterior(box);
+  const requested = cooler?.radiatorMm ?? 240;
+  const wantFans = Math.max(1, Math.round(requested / 120));
+  const fanLen = mm(122);
+  const roofRoom = I.d - mm(30);
+  const frontRoom = I.h - mm(40);
+  let mount: "roof" | "front" = "roof";
+  let fans = wantFans;
+  let fits = true;
+  if (wantFans * fanLen > roofRoom) {
+    if (wantFans * fanLen <= frontRoom) {
+      mount = "front";
+    } else {
+      const best = Math.max(roofRoom, frontRoom);
+      mount = frontRoom > roofRoom ? "front" : "roof";
+      fans = Math.max(1, Math.floor(best / fanLen));
+      fits = false;
+    }
+  }
+  return { mount, fans, fits, len: fans * fanLen, thick: mm(28), fanThick: mm(27) };
+}
+
+export function gpuDims(part?: GpuPart, maxLenMm?: number) {
   const tdp = part?.tdp ?? 200;
-  const len = mm(Math.max(170, Math.min(part?.lengthMm ?? 285, 360)));
+  const rawLen = Math.max(170, Math.min(part?.lengthMm ?? 285, 360));
+  const len = mm(maxLenMm ? Math.min(rawLen, maxLenMm) : rawLen);
   const width = mm(tdp > 300 ? 140 : tdp > 180 ? 125 : 110); // PCB height off the board
   const thick = mm(tdp > 300 ? 68 : tdp > 180 ? 50 : 40); // slot thickness
   const fans = tdp > 280 || (part?.lengthMm ?? 285) > 310 ? 3 : (part?.lengthMm ?? 285) > 220 ? 2 : 1;
@@ -406,16 +448,23 @@ export function MotherboardModel({ part, ...p }: { part?: MotherboardPart } & Me
 
 /* ---------------- RAM ---------------- */
 
-export function RamModel({ part, ...p }: { part?: RamPart } & MeshProps) {
-  const sticks = Math.max(1, Math.min(part?.sticks ?? 2, 4));
+export function RamModel({
+  part,
+  step,
+  slots,
+  ...p
+}: { part?: RamPart; /** slot pitch in scene units */ step?: number; slots?: number } & MeshProps) {
+  const maxSticks = Math.max(1, Math.min(slots ?? 4, 4));
+  const sticks = Math.max(1, Math.min(part?.sticks ?? 2, maxSticks));
   const rgb = hasRgb(part);
   const accent = brandAccent(part);
   const len = mm(133);
   const tall = mm(rgb ? 44 : 34);
+  const pitch = step ?? mm(11);
   return (
     <group>
       {Array.from({ length: sticks }).map((_, i) => (
-        <group key={i} position={[0, 0, -i * mm(22)]}>
+        <group key={i} position={[0, 0, -i * pitch]}>
           {/* PCB */}
           <Box size={[mm(31), len, mm(1.6)]} position={[-mm(15.5), 0, 0]} color={COL.pcbLight} metalness={0.2} roughness={0.8} {...p} />
           {/* heatspreader */}
@@ -435,8 +484,12 @@ export function RamModel({ part, ...p }: { part?: RamPart } & MeshProps) {
 
 /* ---------------- GPU ---------------- */
 
-export function GpuModel({ part, ...p }: { part?: GpuPart } & MeshProps) {
-  const { len, width, thick, fans } = gpuDims(part);
+export function GpuModel({
+  part,
+  maxLenMm,
+  ...p
+}: { part?: GpuPart; maxLenMm?: number } & MeshProps) {
+  const { len, width, thick, fans } = gpuDims(part, maxLenMm);
   const v = gpuVendor(part);
   const accent = vendorColor(v);
   const shroud = v === "nvidia" ? "#1c2229" : v === "amd" ? "#1a1d24" : "#161e28";
@@ -631,7 +684,11 @@ export function CaseModel({ part, ...p }: { part?: CasePart } & MeshProps) {
 /* ---------------- Cooler ---------------- */
 
 /** Air tower / AIO pump block. Authored on the board face at x = 0, growing toward -X. */
-export function CoolerBlockModel({ part, ...p }: { part?: CoolerPart } & MeshProps) {
+export function CoolerBlockModel({
+  part,
+  maxHeightMm,
+  ...p
+}: { part?: CoolerPart; /** case cooler clearance */ maxHeightMm?: number } & MeshProps) {
   const aio = (part?.type ?? "Air") === "AIO";
   const accent = brandAccent(part);
   if (aio) {
@@ -646,7 +703,8 @@ export function CoolerBlockModel({ part, ...p }: { part?: CoolerPart } & MeshPro
       </group>
     );
   }
-  const height = mm(Math.max(60, Math.min(part?.heightMm || 158, 175)));
+  const cap = Math.min(175, maxHeightMm ?? 175);
+  const height = mm(Math.max(60, Math.min(part?.heightMm || 158, cap)));
   const dual = (part?.tdpRating ?? 200) >= 250 || /dark rock pro|d15|dual tower|ak620|se-226/.test(txt(part));
   const fins = 26;
   return (
@@ -688,9 +746,13 @@ export function CoolerBlockModel({ part, ...p }: { part?: CoolerPart } & MeshPro
 }
 
 /** AIO radiator + fans, authored lying flat with its length along Z (roof mount). */
-export function AioRadiatorModel({ part, ...p }: { part?: CoolerPart } & MeshProps) {
+export function AioRadiatorModel({
+  part,
+  fans: fansOverride,
+  ...p
+}: { part?: CoolerPart; /** clamped fan count from radiatorPlan */ fans?: number } & MeshProps) {
   const rad = part?.radiatorMm ?? 240;
-  const fans = Math.max(1, Math.round(rad / 120));
+  const fans = fansOverride ?? Math.max(1, Math.round(rad / 120));
   const accent = brandAccent(part);
   const len = mm(fans * 122);
   return (

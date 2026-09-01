@@ -448,16 +448,23 @@ export function MotherboardModel({ part, ...p }: { part?: MotherboardPart } & Me
 
 /* ---------------- RAM ---------------- */
 
-export function RamModel({ part, ...p }: { part?: RamPart } & MeshProps) {
-  const sticks = Math.max(1, Math.min(part?.sticks ?? 2, 4));
+export function RamModel({
+  part,
+  step,
+  slots,
+  ...p
+}: { part?: RamPart; /** slot pitch in scene units */ step?: number; slots?: number } & MeshProps) {
+  const maxSticks = Math.max(1, Math.min(slots ?? 4, 4));
+  const sticks = Math.max(1, Math.min(part?.sticks ?? 2, maxSticks));
   const rgb = hasRgb(part);
   const accent = brandAccent(part);
   const len = mm(133);
   const tall = mm(rgb ? 44 : 34);
+  const pitch = step ?? mm(11);
   return (
     <group>
       {Array.from({ length: sticks }).map((_, i) => (
-        <group key={i} position={[0, 0, -i * mm(22)]}>
+        <group key={i} position={[0, 0, -i * pitch]}>
           {/* PCB */}
           <Box size={[mm(31), len, mm(1.6)]} position={[-mm(15.5), 0, 0]} color={COL.pcbLight} metalness={0.2} roughness={0.8} {...p} />
           {/* heatspreader */}

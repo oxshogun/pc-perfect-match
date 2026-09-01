@@ -259,9 +259,51 @@ export function mbLayout(part?: MotherboardPart) {
   };
 }
 
-export function gpuDims(part?: GpuPart) {
+/** Usable inner volume of the case (half-extents), after panel thickness. */
+export function caseInterior(part?: CasePart) {
+  const { w, h, d } = caseDims(part);
+  const pad = mm(10);
+  return {
+    hx: w / 2 - pad,
+    hy: h / 2 - pad,
+    hz: d / 2 - pad,
+    w: w - pad * 2,
+    h: h - pad * 2,
+    d: d - pad * 2,
+  };
+}
+
+/**
+ * Picks a legal mount + size for an AIO radiator inside the case.
+ * Falls back roof -> front -> largest supported size, flagging a fit fault.
+ */
+export function radiatorPlan(cooler?: CoolerPart, box?: CasePart) {
+  const I = caseInterior(box);
+  const requested = cooler?.radiatorMm ?? 240;
+  const wantFans = Math.max(1, Math.round(requested / 120));
+  const fanLen = mm(122);
+  const roofRoom = I.d - mm(30);
+  const frontRoom = I.h - mm(40);
+  let mount: "roof" | "front" = "roof";
+  let fans = wantFans;
+  let fits = true;
+  if (wantFans * fanLen > roofRoom) {
+    if (wantFans * fanLen <= frontRoom) {
+      mount = "front";
+    } else {
+      const best = Math.max(roofRoom, frontRoom);
+      mount = frontRoom > roofRoom ? "front" : "roof";
+      fans = Math.max(1, Math.floor(best / fanLen));
+      fits = false;
+    }
+  }
+  return { mount, fans, fits, len: fans * fanLen, thick: mm(28), fanThick: mm(27) };
+}
+
+export function gpuDims(part?: GpuPart, maxLenMm?: number) {
   const tdp = part?.tdp ?? 200;
-  const len = mm(Math.max(170, Math.min(part?.lengthMm ?? 285, 360)));
+  const rawLen = Math.max(170, Math.min(part?.lengthMm ?? 285, 360));
+  const len = mm(maxLenMm ? Math.min(rawLen, maxLenMm) : rawLen);
   const width = mm(tdp > 300 ? 140 : tdp > 180 ? 125 : 110); // PCB height off the board
   const thick = mm(tdp > 300 ? 68 : tdp > 180 ? 50 : 40); // slot thickness
   const fans = tdp > 280 || (part?.lengthMm ?? 285) > 310 ? 3 : (part?.lengthMm ?? 285) > 220 ? 2 : 1;

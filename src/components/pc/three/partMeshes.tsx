@@ -746,9 +746,13 @@ export function CoolerBlockModel({
 }
 
 /** AIO radiator + fans, authored lying flat with its length along Z (roof mount). */
-export function AioRadiatorModel({ part, ...p }: { part?: CoolerPart } & MeshProps) {
+export function AioRadiatorModel({
+  part,
+  fans: fansOverride,
+  ...p
+}: { part?: CoolerPart; /** clamped fan count from radiatorPlan */ fans?: number } & MeshProps) {
   const rad = part?.radiatorMm ?? 240;
-  const fans = Math.max(1, Math.round(rad / 120));
+  const fans = fansOverride ?? Math.max(1, Math.round(rad / 120));
   const accent = brandAccent(part);
   const len = mm(fans * 122);
   return (

@@ -684,7 +684,11 @@ export function CaseModel({ part, ...p }: { part?: CasePart } & MeshProps) {
 /* ---------------- Cooler ---------------- */
 
 /** Air tower / AIO pump block. Authored on the board face at x = 0, growing toward -X. */
-export function CoolerBlockModel({ part, ...p }: { part?: CoolerPart } & MeshProps) {
+export function CoolerBlockModel({
+  part,
+  maxHeightMm,
+  ...p
+}: { part?: CoolerPart; /** case cooler clearance */ maxHeightMm?: number } & MeshProps) {
   const aio = (part?.type ?? "Air") === "AIO";
   const accent = brandAccent(part);
   if (aio) {

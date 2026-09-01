@@ -484,8 +484,12 @@ export function RamModel({
 
 /* ---------------- GPU ---------------- */
 
-export function GpuModel({ part, ...p }: { part?: GpuPart } & MeshProps) {
-  const { len, width, thick, fans } = gpuDims(part);
+export function GpuModel({
+  part,
+  maxLenMm,
+  ...p
+}: { part?: GpuPart; maxLenMm?: number } & MeshProps) {
+  const { len, width, thick, fans } = gpuDims(part, maxLenMm);
   const v = gpuVendor(part);
   const accent = vendorColor(v);
   const shroud = v === "nvidia" ? "#1c2229" : v === "amd" ? "#1a1d24" : "#161e28";

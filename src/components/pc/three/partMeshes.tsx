@@ -703,7 +703,8 @@ export function CoolerBlockModel({
       </group>
     );
   }
-  const height = mm(Math.max(60, Math.min(part?.heightMm || 158, 175)));
+  const cap = Math.min(175, maxHeightMm ?? 175);
+  const height = mm(Math.max(60, Math.min(part?.heightMm || 158, cap)));
   const dual = (part?.tdpRating ?? 200) >= 250 || /dark rock pro|d15|dual tower|ak620|se-226/.test(txt(part));
   const fins = 26;
   return (

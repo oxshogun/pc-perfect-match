@@ -2,14 +2,16 @@ import { lazy, Suspense, useState } from "react";
 import { ClientOnly } from "@tanstack/react-router";
 import { Boxes, ChevronDown, Maximize2, Move3d, X } from "lucide-react";
 import type { ResolvedBuild } from "@/lib/pc/compat";
-import type { PartCategory } from "@/lib/pc/types";
+import type { CompatIssue, PartCategory } from "@/lib/pc/types";
 import { ZoomControls, useZoomControls } from "./ZoomControls";
+import { PartDetailsCard } from "./PartDetailsCard";
 
 const BuildViewer = lazy(() => import("./BuildViewer"));
 
 interface Props {
   resolved: ResolvedBuild;
   faults?: PartCategory[];
+  issues?: CompatIssue[];
 }
 
 function Placeholder() {
@@ -20,12 +22,22 @@ function Placeholder() {
   );
 }
 
-export function BuildPreviewPanel({ resolved, faults }: Props) {
+export function BuildPreviewPanel({ resolved, faults, issues = [] }: Props) {
   const [open, setOpen] = useState(true);
   const [full, setFull] = useState(false);
   const [explode, setExplode] = useState(false);
+  const [selected, setSelected] = useState<PartCategory | null>(null);
   const panelZoom = useZoomControls();
   const fullZoom = useZoomControls();
+
+  function toggleExplode() {
+    setExplode((v) => {
+      if (v) setSelected(null);
+      return !v;
+    });
+  }
+
+  const showCard = explode && selected;
 
   if (!open) {
     return (
@@ -48,7 +60,7 @@ export function BuildPreviewPanel({ resolved, faults }: Props) {
           </span>
           <div className="ml-auto flex items-center gap-1">
             <button
-              onClick={() => setExplode((v) => !v)}
+              onClick={toggleExplode}
               aria-label="Toggle exploded view"
               aria-pressed={explode}
               title={explode ? "Assembled view" : "Exploded view"}
@@ -64,7 +76,10 @@ export function BuildPreviewPanel({ resolved, faults }: Props) {
               <Maximize2 className="h-3.5 w-3.5" />
             </button>
             <button
-              onClick={() => setOpen(false)}
+              onClick={() => {
+                setOpen(false);
+                setSelected(null);
+              }}
               aria-label="Collapse preview"
               className="rounded p-1 text-muted-foreground hover:text-primary"
             >
@@ -79,6 +94,8 @@ export function BuildPreviewPanel({ resolved, faults }: Props) {
                 resolved={resolved}
                 faults={faults}
                 explode={explode}
+                selected={selected}
+                onSelect={setSelected}
                 controlsRef={panelZoom.controlsRef}
               />
             </Suspense>
@@ -88,13 +105,29 @@ export function BuildPreviewPanel({ resolved, faults }: Props) {
             onZoomOut={panelZoom.zoomOut}
             className="absolute bottom-2 right-2"
           />
+          {explode && !selected && (
+            <p className="pointer-events-none absolute bottom-2 left-2 font-mono text-[9px] uppercase tracking-[0.22em] text-muted-foreground">
+              Click a part
+            </p>
+          )}
         </div>
+        {showCard && !full && (
+          <div className="max-h-[320px] overflow-y-auto border-t border-border p-2">
+            <PartDetailsCard
+              category={selected}
+              resolved={resolved}
+              issues={issues}
+              onClose={() => setSelected(null)}
+              className="border-0 bg-transparent p-0 shadow-none backdrop-blur-none"
+            />
+          </div>
+        )}
       </div>
 
       {full && (
         <div className="fixed inset-0 z-50 bg-background/95 p-4">
           <button
-            onClick={() => setExplode((v) => !v)}
+            onClick={toggleExplode}
             aria-label="Toggle exploded view"
             aria-pressed={explode}
             className={`absolute right-20 top-6 z-10 flex items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-2 font-mono text-[10px] uppercase tracking-[0.22em] ${explode ? "text-primary" : "text-muted-foreground"} hover:text-primary`}
@@ -102,28 +135,50 @@ export function BuildPreviewPanel({ resolved, faults }: Props) {
             <Move3d className="h-4 w-4" /> {explode ? "Assembled" : "Explode"}
           </button>
           <button
-            onClick={() => setFull(false)}
+            onClick={() => {
+              setFull(false);
+              setSelected(null);
+            }}
             aria-label="Close fullscreen preview"
             className="absolute right-6 top-6 z-10 rounded-md border border-border bg-card p-2 text-muted-foreground hover:text-primary"
           >
             <X className="h-4 w-4" />
           </button>
-          <div className="relative h-full w-full overflow-hidden rounded-lg border border-border">
-            <ClientOnly fallback={<Placeholder />}>
-              <Suspense fallback={<Placeholder />}>
-                <BuildViewer
+          <div className="flex h-full w-full gap-4">
+            <div className="relative h-full flex-1 overflow-hidden rounded-lg border border-border">
+              <ClientOnly fallback={<Placeholder />}>
+                <Suspense fallback={<Placeholder />}>
+                  <BuildViewer
+                    resolved={resolved}
+                    faults={faults}
+                    explode={explode}
+                    selected={selected}
+                    onSelect={setSelected}
+                    controlsRef={fullZoom.controlsRef}
+                  />
+                </Suspense>
+              </ClientOnly>
+              <ZoomControls
+                onZoomIn={fullZoom.zoomIn}
+                onZoomOut={fullZoom.zoomOut}
+                className="absolute bottom-4 right-4"
+              />
+              {explode && !selected && (
+                <p className="pointer-events-none absolute bottom-4 left-4 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+                  Click a part for details
+                </p>
+              )}
+            </div>
+            {showCard && (
+              <div className="w-[320px] shrink-0 overflow-y-auto pt-16">
+                <PartDetailsCard
+                  category={selected}
                   resolved={resolved}
-                  faults={faults}
-                  explode={explode}
-                  controlsRef={fullZoom.controlsRef}
+                  issues={issues}
+                  onClose={() => setSelected(null)}
                 />
-              </Suspense>
-            </ClientOnly>
-            <ZoomControls
-              onZoomIn={fullZoom.zoomIn}
-              onZoomOut={fullZoom.zoomOut}
-              className="absolute bottom-4 right-4"
-            />
+              </div>
+            )}
           </div>
         </div>
       )}

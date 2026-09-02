@@ -16,6 +16,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { authUserKey, bindQueryClient, buildsKey, partsKey, whoAmIKey } from "@/lib/pc/store";
 import { Cpu } from "lucide-react";
 import { getStoredTheme } from "@/lib/pc/themes";
+import { isGuest, exitGuestMode } from "@/lib/pc/guest";
+import { useState } from "react";
 
 function NotFoundComponent() {
   return (
@@ -127,6 +129,26 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+function GuestBadge() {
+  const [guest, setGuest] = useState(false);
+  useEffect(() => setGuest(isGuest()), []);
+  if (!guest) return null;
+  return (
+    <div className="ml-auto flex items-center gap-3">
+      <span className="hidden sm:inline font-mono text-[10px] uppercase tracking-[0.28em] text-warning">
+        guest · not saved
+      </span>
+      <a
+        href="/auth"
+        onClick={() => exitGuestMode()}
+        className="rounded-md border border-primary/40 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+      >
+        Sign in to save
+      </a>
+    </div>
+  );
+}
+
 function TopNav() {
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-background/80 backdrop-blur-md">
@@ -150,6 +172,7 @@ function TopNav() {
           <NavLink to="/builds">Builds</NavLink>
           <NavLink to="/themes">Themes</NavLink>
         </nav>
+        <GuestBadge />
         <div className="ml-auto hidden md:flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
           <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
           <span>system nominal</span>

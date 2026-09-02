@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
+import { enterGuestMode, exitGuestMode } from "@/lib/pc/guest";
 
 function isSafeNext(next: string | undefined): next is string {
   if (!next) return false;
@@ -30,7 +31,13 @@ function AuthPage() {
 
   const safeNext = isSafeNext(next) ? next : "/";
 
+  function continueAsGuest() {
+    enterGuestMode();
+    window.location.href = safeNext;
+  }
+
   useEffect(() => {
+    exitGuestMode();
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) window.location.href = safeNext;
     });
@@ -104,6 +111,17 @@ function AuthPage() {
               {mode === "signin" ? "Sign in" : "Create account"}
             </Button>
           </form>
+          <div className="relative text-center text-xs text-muted-foreground">
+            <span className="bg-background px-2 relative z-10">or</span>
+            <div className="absolute inset-x-0 top-1/2 h-px bg-border" />
+          </div>
+          <Button variant="ghost" className="w-full" onClick={continueAsGuest} disabled={busy}>
+            Continue as guest
+          </Button>
+          <p className="text-[11px] leading-relaxed text-muted-foreground text-center">
+            Guest mode lets you build and check compatibility right away. Parts and builds you add
+            aren't saved — they disappear when you close the tab.
+          </p>
           <button
             type="button"
             className="text-xs text-muted-foreground hover:underline w-full text-center"

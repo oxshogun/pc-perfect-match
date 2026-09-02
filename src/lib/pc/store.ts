@@ -21,6 +21,18 @@ import {
   whoAmI,
 } from "@/lib/parts.functions";
 import {
+  isGuest,
+  guestPartList,
+  guestUpsertPart,
+  guestDeletePart,
+  guestBuildList,
+  guestCreateBuild,
+  guestSaveBuild,
+  guestDeleteBuild,
+  guestSetActiveBuild,
+  guestActiveBuild,
+} from "./guest";
+import {
   listBuilds,
   saveBuild as saveBuildFn,
   deleteBuild as deleteBuildFn,
@@ -64,7 +76,14 @@ const EMPTY_BUILD: BuildWithActive = {
 /* ---- Hooks ---- */
 
 export function useParts(): Part[] {
-  const q = useQuery({ queryKey: partsKey, queryFn: () => listParts(), staleTime: 30_000 });
+  const q = useQuery({
+    queryKey: partsKey,
+    queryFn: async () => {
+      const catalog = await listParts();
+      return isGuest() ? [...catalog, ...guestPartList()] : catalog;
+    },
+    staleTime: 30_000,
+  });
   return q.data ?? [];
 }
 
@@ -72,6 +91,7 @@ export function useAuthUser() {
   return useQuery({
     queryKey: authUserKey,
     queryFn: async () => {
+      if (isGuest()) return null;
       const { data, error } = await supabase.auth.getUser();
       if (error || !data.user) return null;
       return { id: data.user.id, email: data.user.email ?? null };
@@ -82,7 +102,11 @@ export function useAuthUser() {
 }
 
 export function useBuilds(): Build[] {
-  const q = useQuery({ queryKey: buildsKey, queryFn: () => listBuilds(), staleTime: 30_000 });
+  const q = useQuery({
+    queryKey: buildsKey,
+    queryFn: () => (isGuest() ? guestBuildList() : listBuilds()),
+    staleTime: 30_000,
+  });
   return q.data ?? [];
 }
 
@@ -114,6 +138,11 @@ export function useIsAdmin(): boolean {
 /* ---- Imperative helpers (call server fns + invalidate) ---- */
 
 export async function upsertPart(part: Part): Promise<Part> {
+  if (isGuest()) {
+    const saved = guestUpsertPart(part);
+    invalidate("parts");
+    return saved;
+  }
   const visibility = (part as any).visibility as "catalog" | "private" | undefined;
   const saved = await upsertPartFn({ data: { part: part as any, visibility } });
   invalidate("parts");
@@ -121,17 +150,32 @@ export async function upsertPart(part: Part): Promise<Part> {
 }
 
 export async function deletePart(id: string) {
+  if (isGuest()) {
+    guestDeletePart(id);
+    invalidate("parts", "builds");
+    return;
+  }
   await deletePartFn({ data: { id } });
   invalidate("parts", "builds");
 }
 
 export async function createBuild(name?: string): Promise<Build> {
+  if (isGuest()) {
+    const g = guestCreateBuild(name);
+    invalidate("builds");
+    return g;
+  }
   const b = await createNewBuildFn({ data: { name } });
   invalidate("builds");
   return b;
 }
 
 export async function saveBuild(build: Build) {
+  if (isGuest()) {
+    guestSaveBuild(build);
+    invalidate("builds");
+    return;
+  }
   const payload = {
     id: build.id && /^[0-9a-f-]{36}$/.test(build.id) ? build.id : undefined,
     name: build.name,
@@ -142,16 +186,31 @@ export async function saveBuild(build: Build) {
 }
 
 export async function deleteBuild(id: string) {
+  if (isGuest()) {
+    guestDeleteBuild(id);
+    invalidate("builds");
+    return;
+  }
   await deleteBuildFn({ data: { id } });
   invalidate("builds");
 }
 
 export async function setActiveBuildId(id: string) {
+  if (isGuest()) {
+    guestSetActiveBuild(id);
+    invalidate("builds");
+    return;
+  }
   await setActiveBuildFn({ data: { id } });
   invalidate("builds");
 }
 
 export async function ensureActiveBuild(): Promise<Build> {
+  if (isGuest()) {
+    const g = guestActiveBuild();
+    invalidate("builds");
+    return g;
+  }
   const b = await getOrCreateActiveBuild();
   invalidate("builds");
   return b;
@@ -162,6 +221,11 @@ export async function ensureActiveBuild(): Promise<Build> {
  * to avoid a round-trip. If nothing is loaded yet, no-op.
  */
 export async function updateActiveBuild(mutator: (b: Build) => Build) {
+  if (isGuest()) {
+    guestSaveBuild(mutator(guestActiveBuild()));
+    invalidate("builds");
+    return;
+  }
   if (!qcRef) return;
   const builds = qcRef.getQueryData<Build[]>(partsFallback(buildsKey)) ?? [];
   const active =

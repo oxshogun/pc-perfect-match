@@ -141,7 +141,7 @@ function BudgetPage() {
               sub="left in budget"
             />
             <Stat label="Tier" value={rec.tier.tier} sub={`score ${rec.tier.score}`} />
-            <Stat label="Est. draw" value={`${rec.watts.total} W`} sub={`${rec.psuNote ?? rec.watts.recommended} W PSU rec.`} />
+            <Stat label="Est. draw" value={`${rec.watts.total} W`} sub={`${rec.watts.recommended} W PSU rec.`} />
           </div>
 
           <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_420px]">

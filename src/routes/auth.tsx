@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, ClientOnly } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
@@ -18,11 +18,18 @@ export const Route = createFileRoute("/auth")({
   validateSearch: (s: Record<string, unknown>) => ({
     next: typeof s.next === "string" ? s.next : undefined,
   }),
-  ssr: false,
   component: AuthPage,
 });
 
 function AuthPage() {
+  return (
+    <ClientOnly fallback={<div className="min-h-svh" />}>
+      <AuthPageInner />
+    </ClientOnly>
+  );
+}
+
+function AuthPageInner() {
   const { next } = Route.useSearch();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");

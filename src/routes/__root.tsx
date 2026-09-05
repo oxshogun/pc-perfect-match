@@ -168,6 +168,7 @@ function TopNav() {
         </Link>
         <nav className="flex items-center gap-1 text-sm">
           <NavLink to="/">Builder</NavLink>
+          <NavLink to="/budget">Budget</NavLink>
           <NavLink to="/library">Library</NavLink>
           <NavLink to="/builds">Builds</NavLink>
           <NavLink to="/themes">Themes</NavLink>

@@ -239,6 +239,7 @@ function BuilderPage() {
 
       <BuildPreviewPanel
         resolved={resolved}
+        issues={issues}
         faults={issues
           .filter((i) => i.level === "error" && !!i.category)
           .map((i) => i.category as PartCategory)}

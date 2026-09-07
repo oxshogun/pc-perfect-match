@@ -46,6 +46,9 @@ export interface BasePart {
   imageUrl?: string;
   /** 'catalog' = admin-curated shared part, 'private' = user's own part */
   visibility?: "catalog" | "private";
+  /** true when this part's price/link comes from the signed-in user's own override */
+  hasOverride?: boolean;
+
 }
 
 

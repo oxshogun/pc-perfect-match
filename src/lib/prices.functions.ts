@@ -96,3 +96,42 @@ export const fetchAmazonPrices = createServerFn({ method: "POST" })
     }
     return { results };
   });
+
+/**
+ * Any signed-in user: refreshes prices for the given parts into that user's
+ * own private price overrides. The shared catalog is never modified.
+ */
+export const fetchMyPrices = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => inputSchema.parse(data))
+  .handler(async ({ data, context }): Promise<{ results: PriceResult[] }> => {
+    const apiKey = process.env.RAINFOREST_API_KEY;
+    if (!apiKey) {
+      return {
+        results: data.items.map((i) => ({ id: i.id, asin: i.asin, error: "Price service not configured" })),
+      };
+    }
+
+    const results: PriceResult[] = [];
+    for (const item of data.items) {
+      const r = await fetchOne(item.asin, apiKey);
+      results.push({ id: item.id, ...r });
+      if (r.price == null) continue;
+
+      const { error } = await context.supabase.from("part_overrides").upsert(
+        {
+          user_id: context.userId,
+          part_id: item.id,
+          price: r.price,
+          asin: item.asin.toUpperCase(),
+          image_url: r.image ?? null,
+          price_updated_at: new Date().toISOString(),
+        } as any,
+        { onConflict: "user_id,part_id" },
+      );
+      if (error) {
+        results[results.length - 1] = { id: item.id, asin: item.asin, error: error.message };
+      }
+    }
+    return { results };
+  });

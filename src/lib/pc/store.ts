@@ -269,14 +269,12 @@ export function useInvalidateAll() {
 
 export async function setMyPrice(partId: string, price: number | null, asin?: string | null) {
   if (isGuest()) throw new Error("Sign in to save your own prices.");
-  const { setPartOverride } = await import("@/lib/parts.functions");
   await setPartOverride({ data: { partId, price, asin: asin ?? null } });
   invalidate("parts");
 }
 
 export async function clearMyPrice(partId: string) {
   if (isGuest()) throw new Error("Sign in to save your own prices.");
-  const { clearPartOverride } = await import("@/lib/parts.functions");
   await clearPartOverride({ data: { partId } });
   invalidate("parts");
 }

@@ -18,8 +18,11 @@ import {
   listParts,
   upsertPart as upsertPartFn,
   deletePart as deletePartFn,
+  setPartOverride,
+  clearPartOverride,
   whoAmI,
 } from "@/lib/parts.functions";
+
 import {
   isGuest,
   guestPartList,
@@ -260,4 +263,18 @@ export function useInvalidateAll() {
     qc.invalidateQueries({ queryKey: partsKey });
     qc.invalidateQueries({ queryKey: buildsKey });
   };
+}
+
+/* ---- Personal price overrides ---- */
+
+export async function setMyPrice(partId: string, price: number | null, asin?: string | null) {
+  if (isGuest()) throw new Error("Sign in to save your own prices.");
+  await setPartOverride({ data: { partId, price, asin: asin ?? null } });
+  invalidate("parts");
+}
+
+export async function clearMyPrice(partId: string) {
+  if (isGuest()) throw new Error("Sign in to save your own prices.");
+  await clearPartOverride({ data: { partId } });
+  invalidate("parts");
 }

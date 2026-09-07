@@ -12,7 +12,7 @@ import {
   useIsAdmin,
   useParts,
 } from "@/lib/pc/store";
-import { fetchAmazonPrices } from "@/lib/prices.functions";
+import { fetchAmazonPrices, fetchMyPrices } from "@/lib/prices.functions";
 import { seedCatalog } from "@/lib/parts.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +26,8 @@ import {
 import { PartForm } from "@/components/pc/PartForm";
 import { partSummary } from "@/components/pc/partSummary";
 import { PartThumb } from "@/components/pc/PartThumb";
-import { Search, Plus, Pencil, Trash2, RefreshCw } from "lucide-react";
+import { PriceEditDialog } from "@/components/pc/PriceEditDialog";
+import { Search, Plus, Pencil, Trash2, RefreshCw, DollarSign } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -70,10 +71,12 @@ function LibraryPage() {
   const [editing, setEditing] = useState<Part | null>(null);
   const [creating, setCreating] = useState<PartCategory | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Part | null>(null);
+  const [pricing, setPricing] = useState<Part | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [seeding, setSeeding] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<number>(0);
   const refresh = useServerFn(fetchAmazonPrices);
+  const refreshMine = useServerFn(fetchMyPrices);
   const seed = useServerFn(seedCatalog);
   const autoRan = useRef(false);
   const isSignedIn = Boolean(auth.data);
@@ -88,17 +91,19 @@ function LibraryPage() {
 
   async function runRefresh(silent = false) {
     if (refreshing) return;
-    if (!isAdmin) return;
+    if (!isSignedIn) return;
     if (partsWithAsin.length === 0) {
       if (!silent) toast.info("Add an Amazon ASIN to a part first");
       return;
     }
     setRefreshing(true);
     try {
-      const { results } = await refresh({
+      const call = isAdmin ? refresh : refreshMine;
+      const { results } = await call({
         data: { items: partsWithAsin.map((p) => ({ id: p.id, asin: p.asin! })) },
       });
       applyPriceUpdates(results);
+      invalidateAll();
       setLastRefresh(getLastPriceRefresh());
       const ok = results.filter((r) => r.price != null).length;
       const failed = results.length - ok;
@@ -133,7 +138,7 @@ function LibraryPage() {
     setLastRefresh(getLastPriceRefresh());
     if (autoRan.current) return;
     autoRan.current = true;
-    if (isAdmin && isPriceRefreshDue() && parts.some((p) => p.asin)) {
+    if (isSignedIn && isPriceRefreshDue() && parts.some((p) => p.asin)) {
       void runRefresh(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -166,7 +171,7 @@ function LibraryPage() {
               <Plus className="h-4 w-4 mr-1" /> {seeding ? "Loading…" : "Load default catalog"}
             </Button>
           )}
-          {isAdmin && (
+          {isSignedIn && (
             <Button
               variant="outline"
               onClick={() => runRefresh(false)}
@@ -178,7 +183,7 @@ function LibraryPage() {
               }
             >
               <RefreshCw className={`h-4 w-4 mr-1 ${refreshing ? "animate-spin" : ""}`} />
-              {refreshing ? "Refreshing…" : "Refresh prices"}
+              {refreshing ? "Refreshing…" : isAdmin ? "Refresh prices" : "Update my prices"}
             </Button>
           )}
         </div>
@@ -269,13 +274,28 @@ function LibraryPage() {
               </div>
               {p.price != null && (
                 <div className="flex flex-col items-end shrink-0">
-                  <span className="font-mono text-sm text-primary">${p.price}</span>
+                  <span className="font-mono text-sm text-primary">
+                    ${p.price}
+                    {p.hasOverride && <span className="ml-1 text-[9px] uppercase tracking-widest text-muted-foreground">yours</span>}
+                  </span>
                   {p.priceUpdatedAt && (
                     <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
                       {timeAgo(p.priceUpdatedAt)}
                     </span>
                   )}
                 </div>
+              )}
+
+              {isSignedIn && p.visibility === "catalog" && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  title="Set your own price"
+                  onClick={() => setPricing(p)}
+                  className={p.hasOverride ? "text-primary" : ""}
+                >
+                  <DollarSign className="h-4 w-4" />
+                </Button>
               )}
 
               {(p.visibility !== "catalog" || isAdmin) && (
@@ -323,6 +343,8 @@ function LibraryPage() {
           </DialogContent>
         </Dialog>
       )}
+
+      {pricing && <PriceEditDialog part={pricing} onClose={() => setPricing(null)} />}
 
       <AlertDialog open={!!confirmDelete} onOpenChange={(v) => !v && setConfirmDelete(null)}>
         <AlertDialogContent>

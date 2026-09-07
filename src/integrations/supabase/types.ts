@@ -44,6 +44,50 @@ export type Database = {
         }
         Relationships: []
       }
+      part_overrides: {
+        Row: {
+          asin: string | null
+          created_at: string
+          id: string
+          image_url: string | null
+          part_id: string
+          price: number | null
+          price_updated_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          asin?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          part_id: string
+          price?: number | null
+          price_updated_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          asin?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          part_id?: string
+          price?: number | null
+          price_updated_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "part_overrides_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "parts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parts: {
         Row: {
           asin: string | null

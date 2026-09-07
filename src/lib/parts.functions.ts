@@ -75,8 +75,73 @@ export const listParts = createServerFn({ method: "GET" })
       .order("category")
       .order("created_at", { ascending: true });
     if (error) throw new Error(error.message);
-    return (data as unknown as PartRow[]).map(rowToPart);
+    const parts = (data as unknown as PartRow[]).map(rowToPart);
+
+    // Merge in the caller's private price overrides (RLS returns only their rows).
+    if (headers) {
+      const { data: ov } = await supabase
+        .from("part_overrides")
+        .select("part_id, price, asin, image_url, price_updated_at");
+      if (ov?.length) {
+        const byId = new Map(ov.map((o) => [o.part_id, o]));
+        for (const p of parts) {
+          const o = byId.get(p.id);
+          if (!o) continue;
+          const target = p as any;
+          if (o.price != null) target.price = Number(o.price);
+          if (o.asin) target.asin = o.asin;
+          if (o.image_url) target.imageUrl = o.image_url;
+          if (o.price_updated_at) target.priceUpdatedAt = new Date(o.price_updated_at).getTime();
+          target.hasOverride = true;
+        }
+      }
+    }
+    return parts;
   });
+
+/* ---------------- Personal price overrides ---------------- */
+
+const overrideInput = z.object({
+  partId: z.string().uuid(),
+  price: z.number().min(0).max(100000).nullable().optional(),
+  asin: z
+    .string()
+    .regex(/^[A-Z0-9]{10}$/i, "Amazon product code must be 10 letters/numbers")
+    .nullable()
+    .optional(),
+});
+
+export const setPartOverride = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => overrideInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("part_overrides").upsert(
+      {
+        user_id: context.userId,
+        part_id: data.partId,
+        price: data.price ?? null,
+        asin: data.asin ? data.asin.toUpperCase() : null,
+        price_updated_at: data.price != null ? new Date().toISOString() : null,
+      } as any,
+      { onConflict: "user_id,part_id" },
+    );
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const clearPartOverride = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ partId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("part_overrides")
+      .delete()
+      .eq("user_id", context.userId)
+      .eq("part_id", data.partId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 
 /* ---------------- Upsert ---------------- */
 

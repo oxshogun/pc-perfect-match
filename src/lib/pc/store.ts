@@ -18,8 +18,11 @@ import {
   listParts,
   upsertPart as upsertPartFn,
   deletePart as deletePartFn,
+  setPartOverride,
+  clearPartOverride,
   whoAmI,
 } from "@/lib/parts.functions";
+
 import {
   isGuest,
   guestPartList,

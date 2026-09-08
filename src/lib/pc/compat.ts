@@ -346,6 +346,17 @@ export function analyze(r: ResolvedBuild): CompatIssue[] {
           ),
         );
       }
+      if (need.pin12vhpwr > 0 && psu.pcie12vhpwr < need.pin12vhpwr && psu.pcie8Pin >= need.pin12vhpwr * 3) {
+        out.push(
+          iss(
+            "warning",
+            "psu",
+            "Using a 12VHPWR adapter",
+            `${gpu.name} would run off a 3× 8-pin adapter. A PSU with a native 12VHPWR cable is safer for a card this power-hungry.`,
+          ),
+        );
+      }
+
       if (need.pin8 > psu.pcie8Pin) {
         out.push(
           iss(

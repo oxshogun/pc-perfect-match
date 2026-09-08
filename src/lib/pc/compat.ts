@@ -229,6 +229,86 @@ export function analyze(r: ResolvedBuild): CompatIssue[] {
     }
   }
 
+  /* --- GPU needs a PCIe x16 slot --- */
+  if (gpu && motherboard && motherboard.pcieX16Slots < 1) {
+    out.push(
+      iss(
+        "error",
+        "motherboard",
+        "No PCIe x16 slot",
+        `${motherboard.name} has no PCIe x16 slot for ${gpu.name}.`,
+      ),
+    );
+  }
+
+  /* --- M.2 SATA drives consume a SATA port --- */
+  if (motherboard) {
+    const m2Sata = storage.filter((s) => s.interface === "M.2 SATA").length;
+    const sataTotal = storage.filter((s) => s.interface === "SATA").length + m2Sata;
+    if (m2Sata > 0 && sataTotal > motherboard.sataPorts) {
+      out.push(
+        iss(
+          "warning",
+          "storage",
+          "M.2 SATA shares a SATA port",
+          `${m2Sata} M.2 SATA drive(s) each use one of the board's ${motherboard.sataPorts} SATA ports — total needed is ${sataTotal}.`,
+        ),
+      );
+    }
+  }
+
+  /* --- Radiator size vs case support --- */
+  if (cooler && box && cooler.type === "AIO" && cooler.radiatorMm) {
+    const support = box.radiatorSupport ?? "";
+    const sizes = (support.match(/\d{3}/g) ?? []).map(Number);
+    if (sizes.length && !sizes.some((s) => s >= (cooler.radiatorMm as number))) {
+      out.push(
+        iss(
+          "error",
+          "cooler",
+          "Radiator too large for case",
+          `${cooler.name} uses a ${cooler.radiatorMm} mm radiator; case supports ${support}.`,
+        ),
+      );
+    } else if (!sizes.length) {
+      out.push(
+        iss(
+          "info",
+          "cooler",
+          "Check radiator clearance",
+          `Case does not list radiator support — confirm a ${cooler.radiatorMm} mm radiator fits.`,
+        ),
+      );
+    }
+  }
+
+  /* --- Mixed memory kits --- */
+  if (ram.length > 1) {
+    const speeds = new Set(ram.map((r) => r.speed));
+    if (speeds.size > 1) {
+      out.push(
+        iss(
+          "warning",
+          "ram",
+          "Mixed memory speeds",
+          `Kits are rated ${[...speeds].sort((a, b) => a - b).join(" / ")} MT/s — all sticks will run at the slowest.`,
+        ),
+      );
+    }
+    const sizes = new Set(ram.map((r) => r.sizeGb));
+    if (sizes.size > 1) {
+      out.push(
+        iss(
+          "info",
+          "ram",
+          "Mismatched stick sizes",
+          `Mixing ${[...sizes].join(" / ")} GB sticks can disable dual-channel or flex mode on some boards.`,
+        ),
+      );
+    }
+  }
+
+
   /* --- PSU wattage & connectors --- */
   const est = estimateWattage(r);
   if (psu) {
@@ -266,6 +346,17 @@ export function analyze(r: ResolvedBuild): CompatIssue[] {
           ),
         );
       }
+      if (need.pin12vhpwr > 0 && psu.pcie12vhpwr < need.pin12vhpwr && psu.pcie8Pin >= need.pin12vhpwr * 3) {
+        out.push(
+          iss(
+            "warning",
+            "psu",
+            "Using a 12VHPWR adapter",
+            `${gpu.name} would run off a 3× 8-pin adapter. A PSU with a native 12VHPWR cable is safer for a card this power-hungry.`,
+          ),
+        );
+      }
+
       if (need.pin8 > psu.pcie8Pin) {
         out.push(
           iss(

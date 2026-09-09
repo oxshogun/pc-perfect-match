@@ -1,6 +1,5 @@
 # PC Pal Builder
 
-I want an app that can help build pcs and check for pc part incompatibilities.
 
 This project was built with [Lovable](https://lovable.dev).
 

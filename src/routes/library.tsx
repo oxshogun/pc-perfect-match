@@ -12,7 +12,7 @@ import {
   useIsAdmin,
   useParts,
 } from "@/lib/pc/store";
-import { fetchAmazonPrices, fetchMyPrices } from "@/lib/prices.functions";
+import { fetchMyPrices, refreshCatalogPrices } from "@/lib/prices.functions";
 import { seedCatalog } from "@/lib/parts.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,7 +75,7 @@ function LibraryPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [seeding, setSeeding] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<number>(0);
-  const refresh = useServerFn(fetchAmazonPrices);
+  const refreshCatalog = useServerFn(refreshCatalogPrices);
   const refreshMine = useServerFn(fetchMyPrices);
   const seed = useServerFn(seedCatalog);
   const autoRan = useRef(false);
@@ -201,15 +201,17 @@ function LibraryPage() {
             <Button
               variant="outline"
               onClick={() => runRefresh(false)}
-              disabled={refreshing || partsWithAsin.length === 0}
+              disabled={refreshing || (!isAdmin && partsWithAsin.length === 0)}
               title={
-                partsWithAsin.length === 0
-                  ? "Add an Amazon ASIN to a part to enable price updates"
-                  : "Fetch latest Amazon prices"
+                isAdmin
+                  ? "Look up live Amazon prices for the shared list"
+                  : partsWithAsin.length === 0
+                    ? "Add an Amazon ASIN to a part to enable price updates"
+                    : "Fetch latest Amazon prices"
               }
             >
               <RefreshCw className={`h-4 w-4 mr-1 ${refreshing ? "animate-spin" : ""}`} />
-              {refreshing ? "Refreshing…" : isAdmin ? "Refresh prices" : "Update my prices"}
+              {refreshing ? "Refreshing…" : isAdmin ? "Refresh shared prices" : "Update my prices"}
             </Button>
           )}
         </div>

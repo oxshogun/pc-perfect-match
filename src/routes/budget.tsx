@@ -48,6 +48,14 @@ function BudgetPage() {
 
   const rec = useMemo(() => recommendBuild(parts, range[0], range[1]), [parts, range]);
 
+  const priceFreshness = useMemo(() => {
+    const stamps = parts
+      .map((p) => p.priceUpdatedAt)
+      .filter((t): t is number => typeof t === "number" && t > 0);
+    if (stamps.length === 0) return null;
+    return { latest: Math.max(...stamps), count: stamps.length };
+  }, [parts]);
+
   const rows = useMemo(() => {
     if (!rec) return [];
     const out: { cat: PartCategory; part: Part }[] = [];
@@ -85,6 +93,11 @@ function BudgetPage() {
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
         Slide to your budget and we pick the strongest fully compatible parts list that fits, with prices,
         power draw and a 3D preview of the finished rig.
+      </p>
+      <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+        {priceFreshness
+          ? `Live Amazon prices · ${priceFreshness.count} parts · updated ${timeAgo(priceFreshness.latest)}`
+          : "Shared list prices"}
       </p>
 
       <div className="mt-6 rounded-lg border border-border bg-card p-5">
@@ -159,8 +172,19 @@ function BudgetPage() {
                       {CATEGORY_LABEL[cat]}
                     </span>
                     <span className="min-w-0 flex-1 truncate text-sm text-foreground">{part.name}</span>
-                    <span className="font-mono text-sm tabular-nums text-primary">
-                      ${(part.price ?? 0).toLocaleString()}
+                    <span className="flex shrink-0 items-center gap-2">
+                      {part.hasOverride ? (
+                        <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
+                          yours
+                        </span>
+                      ) : part.priceUpdatedAt ? (
+                        <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
+                          amazon · {timeAgo(part.priceUpdatedAt)}
+                        </span>
+                      ) : null}
+                      <span className="font-mono text-sm tabular-nums text-primary">
+                        ${(part.price ?? 0).toLocaleString()}
+                      </span>
                     </span>
                   </li>
                 ))}
@@ -213,6 +237,15 @@ function BudgetPage() {
       )}
     </div>
   );
+}
+
+function timeAgo(ts: number) {
+  const mins = Math.floor((Date.now() - ts) / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
 }
 
 function ViewerFallback() {

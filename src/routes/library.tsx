@@ -12,7 +12,7 @@ import {
   useIsAdmin,
   useParts,
 } from "@/lib/pc/store";
-import { fetchAmazonPrices, fetchMyPrices } from "@/lib/prices.functions";
+import { fetchMyPrices, refreshCatalogPrices } from "@/lib/prices.functions";
 import { seedCatalog } from "@/lib/parts.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,7 +75,7 @@ function LibraryPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [seeding, setSeeding] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<number>(0);
-  const refresh = useServerFn(fetchAmazonPrices);
+  const refreshCatalog = useServerFn(refreshCatalogPrices);
   const refreshMine = useServerFn(fetchMyPrices);
   const seed = useServerFn(seedCatalog);
   const autoRan = useRef(false);
@@ -92,16 +92,42 @@ function LibraryPage() {
   async function runRefresh(silent = false) {
     if (refreshing) return;
     if (!isSignedIn) return;
-    if (partsWithAsin.length === 0) {
+    if (!isAdmin && partsWithAsin.length === 0) {
       if (!silent) toast.info("Add an Amazon ASIN to a part first");
       return;
     }
     setRefreshing(true);
     try {
-      const call = isAdmin ? refresh : refreshMine;
-      const { results } = await call({
-        data: { items: partsWithAsin.map((p) => ({ id: p.id, asin: p.asin! })) },
-      });
+      let results: { id: string; asin: string; price?: number; error?: string }[] = [];
+      if (isAdmin) {
+        // Shared catalog: look each part up on Amazon by name (or stored ASIN).
+        const targets = (filtered.length && filtered.length < parts.length ? filtered : parts).filter(
+          (p) => p.visibility === "catalog",
+        );
+        if (targets.length === 0) {
+          if (!silent) toast.info("No shared parts to update");
+          return;
+        }
+        for (let i = 0; i < targets.length; i += 20) {
+          const chunk = targets.slice(i, i + 20);
+          const res = await refreshCatalog({
+            data: {
+              items: chunk.map((p) => ({ id: p.id, name: `${p.brand ?? ""} ${p.name}`.trim(), asin: p.asin ?? null })),
+            },
+          });
+          results = results.concat(res.results);
+          if (!silent) {
+            toast.info(`Updated ${results.filter((r) => r.price != null).length} of ${targets.length}…`, {
+              id: "catalog-price-progress",
+            });
+          }
+        }
+      } else {
+        const res = await refreshMine({
+          data: { items: partsWithAsin.map((p) => ({ id: p.id, asin: p.asin! })) },
+        });
+        results = res.results;
+      }
       applyPriceUpdates(results);
       invalidateAll();
       setLastRefresh(getLastPriceRefresh());
@@ -175,15 +201,17 @@ function LibraryPage() {
             <Button
               variant="outline"
               onClick={() => runRefresh(false)}
-              disabled={refreshing || partsWithAsin.length === 0}
+              disabled={refreshing || (!isAdmin && partsWithAsin.length === 0)}
               title={
-                partsWithAsin.length === 0
-                  ? "Add an Amazon ASIN to a part to enable price updates"
-                  : "Fetch latest Amazon prices"
+                isAdmin
+                  ? "Look up live Amazon prices for the shared list"
+                  : partsWithAsin.length === 0
+                    ? "Add an Amazon ASIN to a part to enable price updates"
+                    : "Fetch latest Amazon prices"
               }
             >
               <RefreshCw className={`h-4 w-4 mr-1 ${refreshing ? "animate-spin" : ""}`} />
-              {refreshing ? "Refreshing…" : isAdmin ? "Refresh prices" : "Update my prices"}
+              {refreshing ? "Refreshing…" : isAdmin ? "Refresh shared prices" : "Update my prices"}
             </Button>
           )}
         </div>
